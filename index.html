@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>KCALIA — App Nutricional</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="KCALIA">
+<meta name="theme-color" content="#FEFAF3">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%23F5D040' width='100' height='100' rx='20'/><text x='50' y='68' font-size='48' text-anchor='middle' fill='%231E1408' font-weight='bold'>K</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #E8DCC8; font-family: 'DM Sans', sans-serif; }
+  body { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
+  ::-webkit-scrollbar { width: 0; }
+  input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+  input[type=number] { -moz-appearance: textfield; }
+
+  /* ── Mobile responsive: fill the entire screen ── */
+  @media (max-width: 500px) {
+    html, body {
+      background: #FEFAF3;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+    }
+    #root {
+      width: 100%;
+      height: 100%;
+    }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="AppShell.jsx"></script>
+<script src="Dashboard.jsx"></script>
+<script src="AddMeal.jsx"></script>
+<script src="Progress.jsx"></script>
+<script src="Profile.jsx"></script>
+<script src="Onboarding.jsx"></script>
+<script src="FoodLibrary.jsx"></script>
+<script src="WeeklyAnalysis.jsx"></script>
+<script src="Notifications.jsx"></script>
+
+<script>
+const { useState, useEffect, useCallback } = React;
+
+// ── localStorage helpers ──────────────────────────────────────────
+const STORAGE_KEY = 'kcalia_v1';
+
+
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch { return null; }
+}
+
+function saveState(state) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch {}
+}
+
+// ── Screen config ─────────────────────────────────────────────────
+const FULLSCREEN = new Set(['onboarding', 'add', 'weekly', 'notifications']);
+
+function PhoneShell({ screen, children }) {
+  const mobile = _isMobile();
+  return React.createElement('div', {
+    style: {
+      width: mobile ? '100%' : 390,
+      height: mobile ? '100%' : 844,
+      background: '#FEFAF3',
+      display: 'flex', flexDirection: 'column', overflow: 'hidden',
+      borderRadius: mobile ? 0 : 40,
+      boxShadow: mobile ? 'none' : '0 24px 80px rgba(30,20,8,0.22)',
+      position: 'relative',
+    }
+  },
+    React.createElement(StatusBarSpacer),
+    screen !== 'onboarding' && !mobile && React.createElement(StatusBar),
+    React.createElement('div', { style: { flex: 1, overflowY: 'auto', overflowX: 'hidden' } },
+      children
+    )
+  );
+}
+
+// ── Main App ──────────────────────────────────────────────────────
+function App() {
+  // Load persisted state
+  const saved = loadState();
+
+  const [screen,      setScreen]      = useState(saved && saved.userData ? 'dashboard' : 'onboarding');
+  const [userData,    setUserData]    = useState(saved ? saved.userData    : null);
+  const [dailyGoals,  setDailyGoals]  = useState(saved ? saved.dailyGoals  : { kcal: 2000, protein: 80, fat: 70, carbs: 300, sugar: 50 });
+  const [dailyLog,    setDailyLog]    = useState(saved ? saved.dailyLog    : []);
+  const [foodLibrary, setFoodLibrary] = useState(saved && saved.foodLibrary ? saved.foodLibrary.filter(f => f.custom) : []);
+  const [navMealName, setNavMealName] = useState('');
+  const [notifications, setNotifications] = useState(saved && saved.notifications ? saved.notifications : []);
+  const [notifPrefs, setNotifPrefs] = useState(saved && saved.notifPrefs ? saved.notifPrefs : DEFAULT_NOTIF_PREFS);
+
+  // Persist whenever state changes
+  useEffect(() => {
+    saveState({ userData, dailyGoals, dailyLog, foodLibrary, notifications, notifPrefs });
+  }, [userData, dailyGoals, dailyLog, foodLibrary, notifications, notifPrefs]);
+
+  function navigate(s, mealName = '') {
+    setNavMealName(mealName);
+    setScreen(s);
+  }
+
+  function handleOnboardingComplete(data, suggestedGoals) {
+    setUserData(data);
+    if (suggestedGoals) setDailyGoals(suggestedGoals);
+    setScreen('dashboard');
+  }
+
+  function handleAddMeal(meal) {
+    setDailyLog(prev => [...prev, meal]);
+  }
+
+  function handleUpdateLibrary(newLibrary) {
+    setFoodLibrary(newLibrary);
+  }
+
+  function handleUpdateGoals(newGoals) {
+    setDailyGoals(newGoals);
+  }
+
+  function handleUpdateUserData(updater) {
+    setUserData(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      return next;
+    });
+  }
+
+  function handleLogout() {
+    if (window.confirm('¿Cerrar sesión? Esto borrará todos tus datos.')) {
+      localStorage.removeItem(STORAGE_KEY);
+      setUserData(null);
+      setDailyLog([]);
+      setDailyGoals({ kcal: 2000, protein: 80, fat: 70, carbs: 300, sugar: 50 });
+      setFoodLibrary([]);
+      setNotifications([]);
+      setNotifPrefs(DEFAULT_NOTIF_PREFS);
+      setScreen('onboarding');
+    }
+  }
+
+  // ── Notification helpers ──
+  function handleMarkRead(id) {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+  }
+  function handleMarkAllRead() {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  }
+  function handleClearAll() {
+    setNotifications([]);
+  }
+  function handleNotifAction(action) {
+    if (action.screen) navigate(action.screen, action.mealName || '');
+  }
+  function handleUpdateNotifPrefs(newPrefs) {
+    setNotifPrefs(newPrefs);
+  }
+
+  const today = new Date().toDateString();
+  const todayMeals = dailyLog.filter(m => m.date === today);
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  // Generate notifications on load and periodically
+  useEffect(() => {
+    if (!userData) return;
+    function runGen() {
+      const newNotifs = generateAppNotifications(todayMeals, dailyGoals, dailyLog, userData, notifications, notifPrefs);
+      if (newNotifs.length > 0) setNotifications(prev => [...newNotifs, ...prev].slice(0, 50));
+    }
+    runGen();
+    const iv = setInterval(runGen, 5 * 60 * 1000); // every 5 minutes
+    return () => clearInterval(iv);
+  }, [userData, todayMeals.length, notifPrefs.enabled]);
+
+  // Prepare food list for AddMeal (library converted to AddMeal format)
+  const addMealFoods = foodLibrary.map(f => {
+    const isG = f.unit === 'g';
+    return {
+      ...f,
+      portion: f.portion || (isG ? '100g' : '1 unidad'),
+      kcal:    isG ? Math.round((f.kcalPerG || f.kcal) * 100) : f.kcal,
+      protein: isG ? parseFloat((f.protein * 100).toFixed(1)) : f.protein,
+      fat:     isG ? parseFloat((f.fat     * 100).toFixed(1)) : f.fat,
+      carbs:   isG ? parseFloat((f.carbs   * 100).toFixed(1)) : f.carbs,
+      sugar:   isG ? parseFloat((f.sugar   * 100).toFixed(1)) : f.sugar,
+      kcalPerG: f.kcalPerG || f.kcal,
+    };
+  });
+
+  function renderContent() {
+    switch (screen) {
+      case 'onboarding':
+        return React.createElement(Onboarding, { onComplete: handleOnboardingComplete });
+
+      case 'notifications':
+        return React.createElement(NotificationCenter, {
+          notifications,
+          onMarkRead: handleMarkRead,
+          onMarkAllRead: handleMarkAllRead,
+          onClearAll: handleClearAll,
+          onAction: handleNotifAction,
+          onBack: () => navigate('dashboard'),
+          onOpenSettings: () => navigate('profile'),
+        });
+
+      case 'add':
+        return React.createElement(AddMeal, {
+          onBack:      () => navigate('dashboard'),
+          onAddMeal:   handleAddMeal,
+          mealName:    navMealName,
+          foodLibrary: addMealFoods,
+        });
+
+      case 'library':
+        return React.createElement(FoodLibrary, {
+          onBack:          () => navigate('dashboard'),
+          library:         foodLibrary,
+          onUpdateLibrary: handleUpdateLibrary,
+        });
+
+      case 'weekly':
+        return React.createElement(WeeklyAnalysis, {
+          onBack:      () => navigate('progress'),
+          dailyLog,
+          dailyGoals,
+          userData,
+        });
+
+      case 'progress':
+        return React.createElement('div', null,
+          React.createElement(Progress, { dailyLog, dailyGoals }),
+          React.createElement('div', { style: { padding: '0 16px 20px' } },
+            React.createElement('button', {
+              onClick: () => navigate('weekly'),
+              style: { width: '100%', background: 'white', border: '1.5px solid #EAE0D0', borderRadius: 999, padding: '13px', fontFamily: "'DM Sans',sans-serif", fontSize: 14, fontWeight: 600, color: '#1E1408', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }
+            },
+              React.createElement('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: '#F5D040', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' },
+                React.createElement('polyline', { points: '22 12 18 12 15 21 9 3 6 12 2 12' })
+              ),
+              'Ver análisis semanal'
+            )
+          )
+        );
+
+      case 'profile':
+        return React.createElement(Profile, {
+          userData,
+          dailyGoals,
+          onUpdateGoals:    handleUpdateGoals,
+          onNavigate:       navigate,
+          onLogout:         handleLogout,
+          onUpdateUserData: handleUpdateUserData,
+          notifPrefs,
+          onUpdateNotifPrefs: handleUpdateNotifPrefs,
+        });
+
+      default: // dashboard
+        return React.createElement(Dashboard, {
+          onNavigate:  navigate,
+          userData,
+          todayMeals,
+          dailyGoals,
+          unreadCount,
+        });
+    }
+  }
+
+  if (FULLSCREEN.has(screen)) {
+    return React.createElement(PhoneShell, { screen },
+      renderContent()
+    );
+  }
+
+  return React.createElement(AppShell, { screen, onNavigate: navigate },
+    renderContent()
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+</script>
+</body>
+</html>

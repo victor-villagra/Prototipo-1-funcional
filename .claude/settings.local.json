@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:api.anthropic.com)",
+      "Read(//c/Users/victo/.claude/projects/c--Users-victo-Documents-Proyectos-Prototipo-1/a636e8fb-6e86-47a5-9ccf-5cfe049267d4/tool-results//**)",
+      "Bash(gunzip -c webfetch-1777451004179-hxhs1g.bin)",
+      "Bash(mkdir -p /tmp/design-bundle)",
+      "Read(//tmp/**)",
+      "Bash(tar xzf *)",
+      "Bash(git -C \"c:/Users/victo/Documents/Proyectos/Prototipo 1\" status)",
+      "Bash(node -e ' *)"
+    ]
+  }
+}
