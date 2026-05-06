@@ -114,14 +114,14 @@ function NotificationCenter({ notifications, onMarkRead, onMarkAllRead, onClearA
     return `Hace ${Math.floor(diff / 86400)}d`;
   }
 
-  return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', height: '100%' } },
+  return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-main, #FEFAF3)' } },
     // Header
     React.createElement('div', { style: { padding: '12px 20px 12px', display: 'flex', alignItems: 'center', gap: 12 } },
       React.createElement('div', { onClick: onBack, style: { cursor: 'pointer', padding: 4 } },
         React.createElement(Icon, { name: 'back' })
       ),
       React.createElement('div', { style: { flex: 1 } },
-        React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 20, fontWeight: 800, color: '#1E1408' } }, 'Notificaciones'),
+        React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 20, fontWeight: 800, color: 'var(--color-text, #1E1408)' } }, 'Notificaciones'),
       ),
       React.createElement('div', { onClick: onOpenSettings, style: { cursor: 'pointer', padding: 4 } },
         React.createElement(Icon, { name: 'settings' })
@@ -130,7 +130,7 @@ function NotificationCenter({ notifications, onMarkRead, onMarkAllRead, onClearA
 
     // Action bar
     notifications.length > 0 && React.createElement('div', { style: { padding: '0 20px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
-      React.createElement('span', { style: { fontSize: 12, fontWeight: 600, color: '#9A8878' } }, `${unread} sin leer · ${notifications.length} total`),
+      React.createElement('span', { style: { fontSize: 12, fontWeight: 600, color: 'var(--color-muted, #9A8878)' } }, `${unread} sin leer · ${notifications.length} total`),
       React.createElement('div', { style: { display: 'flex', gap: 12 } },
         unread > 0 && React.createElement('span', { onClick: onMarkAllRead, style: { fontSize: 12, fontWeight: 600, color: '#7EC8E3', cursor: 'pointer' } }, 'Leer todo'),
         React.createElement('span', { onClick: onClearAll, style: { fontSize: 12, fontWeight: 600, color: '#FF8C69', cursor: 'pointer' } }, 'Limpiar')
@@ -142,8 +142,8 @@ function NotificationCenter({ notifications, onMarkRead, onMarkAllRead, onClearA
       notifications.length === 0
         ? React.createElement('div', { style: { textAlign: 'center', padding: '48px 16px' } },
             React.createElement('div', { style: { fontSize: 48, marginBottom: 12 } }, '🔔'),
-            React.createElement('div', { style: { fontSize: 16, fontWeight: 600, color: '#1E1408', marginBottom: 4 } }, 'Sin notificaciones'),
-            React.createElement('div', { style: { fontSize: 13, color: '#9A8878', lineHeight: 1.5 } }, 'Aquí aparecerán tus recordatorios, alertas y reportes.')
+            React.createElement('div', { style: { fontSize: 16, fontWeight: 600, color: 'var(--color-text, #1E1408)', marginBottom: 4 } }, 'Sin notificaciones'),
+            React.createElement('div', { style: { fontSize: 13, color: 'var(--color-muted, #9A8878)', lineHeight: 1.5 } }, 'Aquí aparecerán tus recordatorios, alertas y reportes.')
           )
         : notifications.map(n => {
             const s = NOTIF_STYLES[n.type] || NOTIF_STYLES.tip;
@@ -154,8 +154,8 @@ function NotificationCenter({ notifications, onMarkRead, onMarkAllRead, onClearA
                 if (n.action) onAction(n.action);
               },
               style: {
-                background: n.read ? 'white' : s.bg,
-                border: `1.5px solid ${n.read ? '#EAE0D0' : s.color + '44'}`,
+                background: n.read ? 'var(--bg-card, white)' : s.bg,
+                border: `1.5px solid ${n.read ? 'var(--border-color, #EAE0D0)' : s.color + '44'}`,
                 borderRadius: 16, padding: '12px 14px', marginBottom: 8,
                 cursor: n.action ? 'pointer' : 'default',
                 opacity: n.read ? 0.75 : 1,
@@ -163,13 +163,13 @@ function NotificationCenter({ notifications, onMarkRead, onMarkAllRead, onClearA
               }
             },
               React.createElement('div', { style: { display: 'flex', alignItems: 'flex-start', gap: 10 } },
-                React.createElement('div', { style: { width: 36, height: 36, borderRadius: 12, background: n.read ? '#F5EFE4' : s.color + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 } }, s.icon),
+                React.createElement('div', { style: { width: 36, height: 36, borderRadius: 12, background: n.read ? 'var(--bg-card2, #F5EFE4)' : s.color + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 } }, s.icon),
                 React.createElement('div', { style: { flex: 1, minWidth: 0 } },
                   React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 } },
-                    React.createElement('div', { style: { fontSize: 14, fontWeight: n.read ? 500 : 700, color: '#1E1408', lineHeight: 1.3 } }, n.title),
-                    React.createElement('span', { style: { fontSize: 10, color: '#9A8878', flexShrink: 0, marginTop: 2 } }, timeAgo(n.timestamp))
+                    React.createElement('div', { style: { fontSize: 14, fontWeight: n.read ? 500 : 700, color: 'var(--color-text, #1E1408)', lineHeight: 1.3 } }, n.title),
+                    React.createElement('span', { style: { fontSize: 10, color: 'var(--color-muted, #9A8878)', flexShrink: 0, marginTop: 2 } }, timeAgo(n.timestamp))
                   ),
-                  React.createElement('div', { style: { fontSize: 12, color: '#7A6652', marginTop: 3, lineHeight: 1.4 } }, n.message),
+                  React.createElement('div', { style: { fontSize: 12, color: 'var(--color-sub, #7A6652)', marginTop: 3, lineHeight: 1.4 } }, n.message),
                   n.action && React.createElement('div', { style: { marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, color: s.color } },
                     'Ver →'
                   ),
@@ -199,22 +199,22 @@ function NotificationSettingsSheet({ prefs, onUpdatePrefs, onClose }) {
   return React.createElement('div', {
     style: {
       position: 'absolute', bottom: 0, left: 0, right: 0,
-      background: 'white', borderRadius: '22px 22px 0 0',
+      background: 'var(--bg-card, white)', borderRadius: '22px 22px 0 0',
       boxShadow: '0 -8px 32px rgba(30,20,8,0.16)',
       padding: '0 20px 32px', maxHeight: '85%', overflowY: 'auto', zIndex: 60,
     }
   },
     React.createElement('div', { style: { width: 36, height: 4, background: '#D4C8B4', borderRadius: 999, margin: '12px auto 16px' } }),
-    React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 18, fontWeight: 800, color: '#1E1408', marginBottom: 4 } }, 'Configurar notificaciones'),
-    React.createElement('div', { style: { fontSize: 13, color: '#7A6652', marginBottom: 16 } }, 'Elige qué notificaciones deseas recibir.'),
+    React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 18, fontWeight: 800, color: 'var(--color-text, #1E1408)', marginBottom: 4 } }, 'Configurar notificaciones'),
+    React.createElement('div', { style: { fontSize: 13, color: 'var(--color-sub, #7A6652)', marginBottom: 16 } }, 'Elige qué notificaciones deseas recibir.'),
 
     // Master toggle
     React.createElement('div', {
-      style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0', borderBottom: '2px solid #F5EFE4', marginBottom: 8 }
+      style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0', borderBottom: '2px solid var(--border-color, #F5EFE4)', marginBottom: 8 }
     },
       React.createElement('div', null,
-        React.createElement('div', { style: { fontSize: 15, fontWeight: 700, color: '#1E1408' } }, 'Notificaciones'),
-        React.createElement('div', { style: { fontSize: 11, color: '#9A8878', marginTop: 2 } }, local.enabled ? 'Activadas' : 'Desactivadas')
+        React.createElement('div', { style: { fontSize: 15, fontWeight: 700, color: 'var(--color-text, #1E1408)' } }, 'Notificaciones'),
+        React.createElement('div', { style: { fontSize: 11, color: 'var(--color-muted, #9A8878)', marginTop: 2 } }, local.enabled ? 'Activadas' : 'Desactivadas')
       ),
       React.createElement(ToggleSwitch, { active: local.enabled, onToggle: () => toggle('enabled') })
     ),
@@ -223,12 +223,12 @@ function NotificationSettingsSheet({ prefs, onUpdatePrefs, onClose }) {
     local.enabled && sections.map(s =>
       React.createElement('div', {
         key: s.key,
-        style: { display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: '1px solid #F5EFE4' }
+        style: { display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: '1px solid var(--border-color, #F5EFE4)' }
       },
         React.createElement('div', { style: { fontSize: 20, width: 32, textAlign: 'center', flexShrink: 0 } }, s.icon),
         React.createElement('div', { style: { flex: 1 } },
-          React.createElement('div', { style: { fontSize: 14, fontWeight: 600, color: '#1E1408' } }, s.title),
-          React.createElement('div', { style: { fontSize: 11, color: '#9A8878', marginTop: 2, lineHeight: 1.3 } }, s.desc)
+          React.createElement('div', { style: { fontSize: 14, fontWeight: 600, color: 'var(--color-text, #1E1408)' } }, s.title),
+          React.createElement('div', { style: { fontSize: 11, color: 'var(--color-muted, #9A8878)', marginTop: 2, lineHeight: 1.3 } }, s.desc)
         ),
         React.createElement(ToggleSwitch, { active: local[s.key], onToggle: () => toggle(s.key) })
       )
@@ -242,7 +242,7 @@ function NotificationSettingsSheet({ prefs, onUpdatePrefs, onClose }) {
 
     // Buttons
     React.createElement('div', { style: { display: 'flex', gap: 10, marginTop: 16 } },
-      React.createElement('button', { onClick: onClose, style: { flex: 1, padding: '14px', background: 'white', border: '1.5px solid #EAE0D0', borderRadius: 999, fontFamily: "'DM Sans',sans-serif", fontSize: 15, fontWeight: 600, color: '#7A6652', cursor: 'pointer' } }, 'Cancelar'),
+      React.createElement('button', { onClick: onClose, style: { flex: 1, padding: '14px', background: 'var(--bg-card, white)', border: '1.5px solid var(--border-color, #EAE0D0)', borderRadius: 999, fontFamily: "'DM Sans',sans-serif", fontSize: 15, fontWeight: 600, color: 'var(--color-sub, #7A6652)', cursor: 'pointer' } }, 'Cancelar'),
       React.createElement('button', {
         onClick: () => onUpdatePrefs(local),
         style: { flex: 2, padding: '14px', background: '#F5D040', border: 'none', borderRadius: 999, fontFamily: "'DM Sans',sans-serif", fontSize: 15, fontWeight: 600, color: '#1E1408', cursor: 'pointer', boxShadow: '0 2px 8px rgba(245,208,64,0.3)' }

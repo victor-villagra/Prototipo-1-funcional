@@ -34,7 +34,48 @@
       height: 100%;
     }
   }
+
+  /* ── Dark theme ── */
+  body.dark { background: #1A1208; }
+  body.dark .phone-shell {
+    background: #1E1408 !important;
+    --bg-main: #1E1408;
+    --bg-card: #2A1E10;
+    --bg-card2: #332512;
+    --color-text: #F5EFE4;
+    --color-sub: #C8B89A;
+    --color-muted: #8A7868;
+    --border-color: #3A2C1E;
+    --bg-input: #2A1E10;
+  }
+  body.dark .phone-shell input,
+  body.dark .phone-shell textarea {
+    background: var(--bg-input);
+    color: var(--color-text);
+    border-color: var(--border-color);
+  }
+  body:not(.dark) {
+    --bg-main: #FEFAF3;
+    --bg-card: #ffffff;
+    --bg-card2: #F5EFE4;
+    --color-text: #1E1408;
+    --color-sub: #7A6652;
+    --color-muted: #9A8878;
+    --border-color: #EAE0D0;
+    --bg-input: #ffffff;
+  }
 </style>
+
+<script>
+  // Apply dark theme immediately to avoid flash
+  (function() {
+    try {
+      if (JSON.parse(localStorage.getItem('kcalia_dark_theme'))) {
+        document.body.classList.add('dark');
+      }
+    } catch(e) {}
+  })();
+</script>
 </head>
 <body>
 <div id="root"></div>
@@ -77,6 +118,7 @@ const FULLSCREEN = new Set(['onboarding', 'add', 'weekly', 'notifications']);
 function PhoneShell({ screen, children }) {
   const mobile = _isMobile();
   return React.createElement('div', {
+    className: 'phone-shell',
     style: {
       width: mobile ? '100%' : 390,
       height: mobile ? '100%' : 844,
@@ -106,16 +148,25 @@ function App() {
   const [dailyLog,    setDailyLog]    = useState(saved ? saved.dailyLog    : []);
   const [foodLibrary, setFoodLibrary] = useState(saved && saved.foodLibrary ? saved.foodLibrary.filter(f => f.custom) : []);
   const [navMealName, setNavMealName] = useState('');
+  const [addMealKey,  setAddMealKey]  = useState(0);
   const [notifications, setNotifications] = useState(saved && saved.notifications ? saved.notifications : []);
   const [notifPrefs, setNotifPrefs] = useState(saved && saved.notifPrefs ? saved.notifPrefs : DEFAULT_NOTIF_PREFS);
 
-  // Persist whenever state changes
+  // Persist with debounce to avoid writing on every keystroke
   useEffect(() => {
-    saveState({ userData, dailyGoals, dailyLog, foodLibrary, notifications, notifPrefs });
+    const t = setTimeout(() => {
+      saveState({ userData, dailyGoals, dailyLog, foodLibrary, notifications, notifPrefs });
+    }, 500);
+    return () => clearTimeout(t);
   }, [userData, dailyGoals, dailyLog, foodLibrary, notifications, notifPrefs]);
 
   function navigate(s, mealName = '') {
-    setNavMealName(mealName);
+    if (s === 'add') {
+      setNavMealName(mealName);
+      setAddMealKey(k => k + 1);
+    } else {
+      setNavMealName('');
+    }
     setScreen(s);
   }
 
@@ -127,6 +178,10 @@ function App() {
 
   function handleAddMeal(meal) {
     setDailyLog(prev => [...prev, meal]);
+  }
+
+  function handleDeleteMeal(id) {
+    setDailyLog(prev => prev.filter(m => m.id !== id));
   }
 
   function handleUpdateLibrary(newLibrary) {
@@ -190,8 +245,8 @@ function App() {
     return () => clearInterval(iv);
   }, [userData, todayMeals.length, notifPrefs.enabled]);
 
-  // Prepare food list for AddMeal (library converted to AddMeal format)
-  const addMealFoods = foodLibrary.map(f => {
+  // Prepare food list for AddMeal: custom library first, then DB foods not already in library
+  function toAddMealFormat(f) {
     const isG = f.unit === 'g';
     return {
       ...f,
@@ -201,9 +256,15 @@ function App() {
       fat:     isG ? parseFloat((f.fat     * 100).toFixed(1)) : f.fat,
       carbs:   isG ? parseFloat((f.carbs   * 100).toFixed(1)) : f.carbs,
       sugar:   isG ? parseFloat((f.sugar   * 100).toFixed(1)) : f.sugar,
-      kcalPerG: f.kcalPerG || f.kcal,
+      kcalPerG: isG ? (f.kcalPerG || f.kcal) : null,
     };
-  });
+  }
+  const customMealFoods = foodLibrary.map(toAddMealFormat);
+  const customNames = new Set(foodLibrary.map(f => f.name.toLowerCase()));
+  const dbMealFoods = (window.DB_FOODS || [])
+    .filter(f => !customNames.has(f.name.toLowerCase()))
+    .map(toAddMealFormat);
+  const addMealFoods = [...customMealFoods, ...dbMealFoods];
 
   function renderContent() {
     switch (screen) {
@@ -223,6 +284,7 @@ function App() {
 
       case 'add':
         return React.createElement(AddMeal, {
+          key:         addMealKey,
           onBack:      () => navigate('dashboard'),
           onAddMeal:   handleAddMeal,
           mealName:    navMealName,
@@ -238,10 +300,11 @@ function App() {
 
       case 'weekly':
         return React.createElement(WeeklyAnalysis, {
-          onBack:      () => navigate('progress'),
+          onBack:         () => navigate('progress'),
           dailyLog,
           dailyGoals,
           userData,
+          onUpdateGoals:  handleUpdateGoals,
         });
 
       case 'progress':
@@ -274,11 +337,12 @@ function App() {
 
       default: // dashboard
         return React.createElement(Dashboard, {
-          onNavigate:  navigate,
+          onNavigate:   navigate,
           userData,
           todayMeals,
           dailyGoals,
           unreadCount,
+          onDeleteMeal: handleDeleteMeal,
         });
     }
   }

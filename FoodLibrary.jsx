@@ -83,7 +83,26 @@ const NUTRITION_DB = [
   { n:['empanada'], k:250, p:8, f:12, c:28, s:1.5, u:'u' },
 ];
 
-function _norm(s) { return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+// Convert NUTRITION_DB entries to the full food object format used in library
+function _buildDBFood(entry, idx) {
+  const isG = entry.u === 'g';
+  return {
+    id: 'db_' + idx,
+    name: entry.n[0].charAt(0).toUpperCase() + entry.n[0].slice(1),
+    unit: entry.u,
+    kcal:    isG ? entry.k : entry.k,
+    protein: isG ? entry.p : entry.p,
+    fat:     isG ? entry.f : entry.f,
+    carbs:   isG ? entry.c : entry.c,
+    sugar:   isG ? entry.s : entry.s,
+    kcalPerG: isG ? entry.k : null,
+    custom: false,
+  };
+}
+
+const DB_FOODS = NUTRITION_DB.map(_buildDBFood);
+
+function _norm(s) { return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
 
 function findFoodInDB(name) {
   const q = _norm(name);
@@ -105,45 +124,60 @@ function MacroDot({ color }) {
   return React.createElement('div', { style: { width: 8, height: 8, borderRadius: 999, background: color, flexShrink: 0 } });
 }
 
-function FoodDetailSheet({ food, onClose, onDelete }) {
+function FoodDetailSheet({ food, onClose, onDelete, onEdit }) {
   const isGram = food.unit === 'g';
   const perLabel = isGram ? '100g' : '1 unidad';
-  const kcalVal  = isGram ? Math.round(food.kcal * 100) : food.kcal;
+  const kcalVal  = isGram ? Math.round((food.kcalPerG || food.kcal) * 100) : food.kcal;
 
   return React.createElement('div', {
     style: {
       position: 'absolute', bottom: 0, left: 0, right: 0,
-      background: 'white', borderRadius: '22px 22px 0 0',
+      background: 'var(--bg-card, white)', borderRadius: '22px 22px 0 0',
       boxShadow: '0 -8px 32px rgba(30,20,8,0.16)',
       padding: '0 20px 32px', zIndex: 60,
     }
   },
     React.createElement('div', { style: { width: 36, height: 4, background: '#D4C8B4', borderRadius: 999, margin: '12px auto 16px' } }),
     React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 } },
-      React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 18, fontWeight: 800, color: '#1E1408' } }, food.name),
-      React.createElement('div', { onClick: onClose, style: { cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#7A6652' } }, 'Cerrar')
+      React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 18, fontWeight: 800, color: 'var(--color-text, #1E1408)' } }, food.name),
+      React.createElement('div', { onClick: onClose, style: { cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--color-sub, #7A6652)' } }, 'Cerrar')
     ),
-    React.createElement('div', { style: { fontSize: 13, color: '#9A8878', marginBottom: 16 } }, `Valores por ${perLabel}`),
+    React.createElement('div', { style: { fontSize: 13, color: 'var(--color-muted, #9A8878)', marginBottom: 16 } }, `Valores por ${perLabel}`),
     React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 } },
       MACRO_FIELDS.map(m => {
-        const val = isGram ? (food[m.key] * 100) : food[m.key];
+        const val = isGram ? ((food.kcalPerG || food.kcal) * 100 === food.kcal && m.key === 'kcal' ? kcalVal : (food[m.key] || 0) * 100) : food[m.key];
+        const displayVal = m.key === 'kcal' ? (isGram ? kcalVal : food.kcal) : (isGram ? (food[m.key] || 0) * 100 : food[m.key]);
         return React.createElement('div', { key: m.key, style: { background: m.color + '22', borderRadius: 12, padding: '12px 14px' } },
           React.createElement('div', { style: { fontSize: 11, fontWeight: 600, color: m.color, marginBottom: 2 } }, m.label),
-          React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 20, fontWeight: 900, color: '#1E1408' } },
-            `${typeof val === 'number' ? val.toFixed(m.key === 'kcal' ? 0 : 1) : '—'} ${m.suffix}`
+          React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 20, fontWeight: 900, color: 'var(--color-text, #1E1408)' } },
+            `${typeof displayVal === 'number' ? displayVal.toFixed(m.key === 'kcal' ? 0 : 1) : '—'} ${m.suffix}`
           )
         );
       })
     ),
-    food.custom && React.createElement('button', {
-      onClick: onDelete,
-      style: { width: '100%', background: '#FFE0E0', border: 'none', borderRadius: 999, padding: '13px', fontFamily: "'DM Sans',sans-serif", fontSize: 14, fontWeight: 600, color: '#C03030', cursor: 'pointer' }
-    }, 'Eliminar alimento')
+    React.createElement('div', { style: { display: 'flex', gap: 8 } },
+      food.custom && React.createElement('button', {
+        onClick: onEdit,
+        style: { flex: 1, background: '#FFF3C4', border: 'none', borderRadius: 999, padding: '13px', fontFamily: "'DM Sans',sans-serif", fontSize: 14, fontWeight: 600, color: '#9A6D00', cursor: 'pointer' }
+      }, 'Editar'),
+      food.custom && React.createElement('button', {
+        onClick: onDelete,
+        style: { flex: 1, background: '#FFE0E0', border: 'none', borderRadius: 999, padding: '13px', fontFamily: "'DM Sans',sans-serif", fontSize: 14, fontWeight: 600, color: '#C03030', cursor: 'pointer' }
+      }, 'Eliminar')
+    )
   );
 }
 
-function AddFoodSheet({ onClose, onSave }) {
-  const [form, setForm]       = React.useState({ name: '', unit: 'g', kcal: '', protein: '', fat: '', carbs: '', sugar: '' });
+function AddFoodSheet({ onClose, onSave, editFood }) {
+  const [form, setForm] = React.useState(editFood ? {
+    name: editFood.name,
+    unit: editFood.unit,
+    kcal:    String(editFood.unit === 'g' ? (editFood.kcalPerG || editFood.kcal) : editFood.kcal),
+    protein: String(editFood.protein),
+    fat:     String(editFood.fat),
+    carbs:   String(editFood.carbs),
+    sugar:   String(editFood.sugar),
+  } : { name: '', unit: 'g', kcal: '', protein: '', fat: '', carbs: '', sugar: '' });
   const [aiLoading, setAiLoading] = React.useState(false);
   const [aiDone, setAiDone]   = React.useState(false);
   const [aiError, setAiError] = React.useState('');
@@ -154,7 +188,6 @@ function AddFoodSheet({ onClose, onSave }) {
     if (!form.name) return;
     setAiLoading(true);
     setAiError('');
-    // Simular procesamiento
     await new Promise(r => setTimeout(r, 700));
     const found = findFoodInDB(form.name);
     if (found) {
@@ -171,28 +204,28 @@ function AddFoodSheet({ onClose, onSave }) {
   return React.createElement('div', {
     style: {
       position: 'absolute', bottom: 0, left: 0, right: 0,
-      background: 'white', borderRadius: '24px 24px 0 0',
+      background: 'var(--bg-card, white)', borderRadius: '24px 24px 0 0',
       boxShadow: '0 -8px 32px rgba(30,20,8,0.14)',
       padding: '0 20px 32px', maxHeight: '85%', overflowY: 'auto', zIndex: 50,
     }
   },
     React.createElement('div', { style: { width: 36, height: 4, background: '#D4C8B4', borderRadius: 999, margin: '12px auto 16px' } }),
-    React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 18, fontWeight: 800, color: '#1E1408', marginBottom: 16 } }, 'Agregar alimento'),
+    React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 18, fontWeight: 800, color: 'var(--color-text, #1E1408)', marginBottom: 16 } }, editFood ? 'Editar alimento' : 'Agregar alimento'),
     React.createElement('div', { style: { marginBottom: 12 } },
-      React.createElement('div', { style: { fontSize: 13, fontWeight: 600, color: '#5A4838', marginBottom: 5 } }, 'Nombre del alimento'),
+      React.createElement('div', { style: { fontSize: 13, fontWeight: 600, color: 'var(--color-sub, #5A4838)', marginBottom: 5 } }, 'Nombre del alimento'),
       React.createElement('input', {
         placeholder: 'Ej. Pechuga de pollo', value: form.name,
         onChange: e => { update('name', e.target.value); setAiDone(false); },
-        style: { width: '100%', padding: '12px 14px', borderRadius: 12, border: '1.5px solid #EAE0D0', fontFamily: "'DM Sans',sans-serif", fontSize: 15, color: '#1E1408', outline: 'none' }
+        style: { width: '100%', padding: '12px 14px', borderRadius: 12, border: '1.5px solid var(--border-color, #EAE0D0)', background: 'var(--bg-input, white)', fontFamily: "'DM Sans',sans-serif", fontSize: 15, color: 'var(--color-text, #1E1408)', outline: 'none' }
       })
     ),
     React.createElement('div', { style: { marginBottom: 14 } },
-      React.createElement('div', { style: { fontSize: 13, fontWeight: 600, color: '#5A4838', marginBottom: 5 } }, 'Unidad de medida'),
+      React.createElement('div', { style: { fontSize: 13, fontWeight: 600, color: 'var(--color-sub, #5A4838)', marginBottom: 5 } }, 'Unidad de medida'),
       React.createElement('div', { style: { display: 'flex', gap: 8 } },
         [{ id: 'g', label: 'Por gramo (g)' }, { id: 'u', label: 'Por unidad' }].map(u =>
           React.createElement('div', {
             key: u.id, onClick: () => update('unit', u.id),
-            style: { flex: 1, padding: '10px', borderRadius: 12, border: `1.5px solid ${form.unit === u.id ? '#F5D040' : '#EAE0D0'}`, background: form.unit === u.id ? '#FFF3C4' : 'white', textAlign: 'center', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: form.unit === u.id ? '#9A6D00' : '#5A4838' }
+            style: { flex: 1, padding: '10px', borderRadius: 12, border: `1.5px solid ${form.unit === u.id ? '#F5D040' : 'var(--border-color, #EAE0D0)'}`, background: form.unit === u.id ? '#FFF3C4' : 'var(--bg-card, white)', textAlign: 'center', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: form.unit === u.id ? '#9A6D00' : 'var(--color-sub, #5A4838)' }
           }, u.label)
         )
       )
@@ -213,7 +246,7 @@ function AddFoodSheet({ onClose, onSave }) {
     ),
     aiError && React.createElement('div', { style: { fontSize: 12, color: '#C03030', marginBottom: 12, padding: '6px 10px', background: '#FFE0E0', borderRadius: 8 } }, aiError),
     React.createElement('div', { style: { marginBottom: 4 } },
-      React.createElement('div', { style: { fontSize: 13, fontWeight: 600, color: '#5A4838', marginBottom: 8 } }, `Valores por ${form.unit === 'g' ? '1 gramo' : '1 unidad'}`),
+      React.createElement('div', { style: { fontSize: 13, fontWeight: 600, color: 'var(--color-sub, #5A4838)', marginBottom: 8 } }, `Valores por ${form.unit === 'g' ? '1 gramo' : '1 unidad'}`),
       React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 } },
         MACRO_FIELDS.map(m =>
           React.createElement('div', { key: m.key },
@@ -222,20 +255,40 @@ function AddFoodSheet({ onClose, onSave }) {
               React.createElement('input', {
                 type: 'number', placeholder: '0', value: form[m.key],
                 onChange: e => update(m.key, e.target.value),
-                style: { width: '100%', padding: '10px 32px 10px 10px', borderRadius: 10, border: `1.5px solid ${form[m.key] ? m.color + '88' : '#EAE0D0'}`, fontFamily: "'Nunito',sans-serif", fontSize: 14, fontWeight: 700, color: '#1E1408', outline: 'none' }
+                style: { width: '100%', padding: '10px 32px 10px 10px', borderRadius: 10, border: `1.5px solid ${form[m.key] ? m.color + '88' : 'var(--border-color, #EAE0D0)'}`, background: 'var(--bg-input, white)', fontFamily: "'Nunito',sans-serif", fontSize: 14, fontWeight: 700, color: 'var(--color-text, #1E1408)', outline: 'none' }
               }),
-              React.createElement('span', { style: { position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: '#9A8878' } }, m.suffix)
+              React.createElement('span', { style: { position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: 'var(--color-muted, #9A8878)' } }, m.suffix)
             )
           )
         )
       )
     ),
     React.createElement('div', { style: { marginTop: 16, display: 'flex', gap: 10 } },
-      React.createElement('button', { onClick: onClose, style: { flex: 1, padding: '14px', background: 'white', border: '1.5px solid #EAE0D0', borderRadius: 999, fontFamily: "'DM Sans',sans-serif", fontSize: 15, fontWeight: 600, color: '#7A6652', cursor: 'pointer' } }, 'Cancelar'),
+      React.createElement('button', { onClick: onClose, style: { flex: 1, padding: '14px', background: 'var(--bg-card, white)', border: '1.5px solid var(--border-color, #EAE0D0)', borderRadius: 999, fontFamily: "'DM Sans',sans-serif", fontSize: 15, fontWeight: 600, color: 'var(--color-sub, #7A6652)', cursor: 'pointer' } }, 'Cancelar'),
       React.createElement('button', {
-        onClick: () => canSave && onSave({ ...form, id: Date.now(), custom: true }),
+        onClick: () => {
+          if (!canSave) return;
+          const kcalRaw    = parseFloat(form.kcal)    || 0;
+          const proteinRaw = parseFloat(form.protein) || 0;
+          const fatRaw     = parseFloat(form.fat)     || 0;
+          const carbsRaw   = parseFloat(form.carbs)   || 0;
+          const sugarRaw   = parseFloat(form.sugar)   || 0;
+          const normalized = {
+            id: editFood ? editFood.id : Date.now(),
+            name: form.name,
+            unit: form.unit,
+            kcal:    form.unit === 'g' ? kcalRaw : kcalRaw,
+            protein: form.unit === 'g' ? proteinRaw : proteinRaw,
+            fat:     form.unit === 'g' ? fatRaw : fatRaw,
+            carbs:   form.unit === 'g' ? carbsRaw : carbsRaw,
+            sugar:   form.unit === 'g' ? sugarRaw : sugarRaw,
+            kcalPerG: form.unit === 'g' ? kcalRaw : null,
+            custom: true,
+          };
+          onSave(normalized);
+        },
         style: { flex: 2, padding: '14px', background: canSave ? '#F5D040' : '#EAE0D0', border: 'none', borderRadius: 999, fontFamily: "'DM Sans',sans-serif", fontSize: 15, fontWeight: 600, color: canSave ? '#1E1408' : '#B8A898', cursor: canSave ? 'pointer' : 'not-allowed', boxShadow: canSave ? '0 2px 8px rgba(245,208,64,0.3)' : 'none' }
-      }, 'Guardar alimento')
+      }, editFood ? 'Guardar cambios' : 'Guardar alimento')
     )
   );
 }
@@ -246,15 +299,17 @@ function FoodRow({ food, onSelect }) {
 
   return React.createElement('div', {
     onClick: () => onSelect(food),
-    style: { background: 'white', borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 1px 8px rgba(30,20,8,0.06)', marginBottom: 8, cursor: 'pointer' }
+    style: { background: 'var(--bg-card, white)', borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 1px 8px rgba(30,20,8,0.06)', marginBottom: 8, cursor: 'pointer' }
   },
     React.createElement('div', { style: { flex: 1 } },
       React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 6 } },
-        React.createElement('span', { style: { fontSize: 15, fontWeight: 600, color: '#1E1408' } }, food.name),
-        food.custom && React.createElement('span', { style: { fontSize: 10, fontWeight: 600, background: '#FFF3C4', color: '#9A6D00', padding: '1px 6px', borderRadius: 999 } }, 'MÍO')
+        React.createElement('span', { style: { fontSize: 15, fontWeight: 600, color: 'var(--color-text, #1E1408)' } }, food.name),
+        food.custom
+          ? React.createElement('span', { style: { fontSize: 10, fontWeight: 600, background: '#FFF3C4', color: '#9A6D00', padding: '1px 6px', borderRadius: 999 } }, 'MÍO')
+          : React.createElement('span', { style: { fontSize: 10, fontWeight: 600, background: '#DFF3FA', color: '#1A7A9A', padding: '1px 6px', borderRadius: 999 } }, 'BASE')
       ),
       React.createElement('div', { style: { display: 'flex', gap: 8, marginTop: 4, alignItems: 'center' } },
-        React.createElement('span', { style: { fontSize: 12, color: '#9A8878' } }, `por ${isGram ? '100g' : 'unidad'}`),
+        React.createElement('span', { style: { fontSize: 12, color: 'var(--color-muted, #9A8878)' } }, `por ${isGram ? '100g' : 'unidad'}`),
         React.createElement('span', { style: { fontSize: 12, fontWeight: 600, color: '#F5D040', fontFamily: "'Nunito',sans-serif" } }, `${Math.round(kcalPer)} kcal`),
         React.createElement('div', { style: { display: 'flex', gap: 4 } },
           MACRO_FIELDS.slice(1).map(m => React.createElement(MacroDot, { key: m.key, color: m.color }))
@@ -267,40 +322,60 @@ function FoodRow({ food, onSelect }) {
   );
 }
 
+const LIBRARY_TABS = [
+  { id: 'all', label: 'Todos' },
+  { id: 'custom', label: 'Míos' },
+  { id: 'db', label: 'Base' },
+];
+
 function FoodLibrary({ onBack, library, onUpdateLibrary }) {
   const [query, setQuery]       = React.useState('');
   const [showAdd, setShowAdd]   = React.useState(false);
+  const [editFood, setEditFood] = React.useState(null);
   const [selected, setSelected] = React.useState(null);
+  const [tab, setTab]           = React.useState('all');
 
-  const foods = library || [];
-  const filtered = foods.filter(f => f.name.toLowerCase().includes(query.toLowerCase()));
+  const customFoods = library || [];
 
-  function handleSave(food) {
-    const normalized = {
-      ...food,
-      kcal:    parseFloat(food.kcal)    || 0,
-      protein: parseFloat(food.protein) || 0,
-      fat:     parseFloat(food.fat)     || 0,
-      carbs:   parseFloat(food.carbs)   || 0,
-      sugar:   parseFloat(food.sugar)   || 0,
-    };
-    if (onUpdateLibrary) onUpdateLibrary([normalized, ...foods]);
+  // Merge: custom foods take precedence (shown first), then DB foods not overridden
+  const allFoods = [
+    ...customFoods,
+    ...DB_FOODS.filter(dbf => !customFoods.some(cf => cf.name.toLowerCase() === dbf.name.toLowerCase())),
+  ];
+
+  const tabFoods = tab === 'custom' ? customFoods : tab === 'db' ? DB_FOODS : allFoods;
+  const filtered = tabFoods.filter(f => f.name.toLowerCase().includes(query.toLowerCase()));
+
+  function handleSave(normalized) {
+    if (editFood) {
+      // Update existing custom food
+      if (onUpdateLibrary) onUpdateLibrary(customFoods.map(f => f.id === editFood.id ? normalized : f));
+    } else {
+      if (onUpdateLibrary) onUpdateLibrary([normalized, ...customFoods]);
+    }
     setShowAdd(false);
+    setEditFood(null);
   }
 
   function handleDelete(food) {
-    if (onUpdateLibrary) onUpdateLibrary(foods.filter(f => f.id !== food.id));
+    if (onUpdateLibrary) onUpdateLibrary(customFoods.filter(f => f.id !== food.id));
     setSelected(null);
   }
 
-  return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' } },
+  function handleEdit(food) {
+    setSelected(null);
+    setEditFood(food);
+    setShowAdd(true);
+  }
+
+  return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', height: '100%', position: 'relative', background: 'var(--bg-main, #FEFAF3)' } },
     React.createElement('div', { style: { padding: '12px 20px 0', display: 'flex', alignItems: 'center', gap: 12 } },
       React.createElement('div', { onClick: onBack, style: { cursor: 'pointer', padding: 4 } },
         React.createElement(Icon, { name: 'back' })
       ),
-      React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 20, fontWeight: 800, color: '#1E1408', flex: 1 } }, 'Mis alimentos'),
+      React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 20, fontWeight: 800, color: 'var(--color-text, #1E1408)', flex: 1 } }, 'Biblioteca de alimentos'),
       React.createElement('div', {
-        onClick: () => setShowAdd(true),
+        onClick: () => { setEditFood(null); setShowAdd(true); },
         style: { width: 36, height: 36, background: '#F5D040', borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 8px rgba(245,208,64,0.35)' }
       },
         React.createElement('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: '#1E1408', strokeWidth: 2.2, strokeLinecap: 'round' },
@@ -309,33 +384,47 @@ function FoodLibrary({ onBack, library, onUpdateLibrary }) {
         )
       )
     ),
-    React.createElement('div', { style: { padding: '12px 20px 0' } },
+    // Tabs
+    React.createElement('div', { style: { padding: '10px 20px 0', display: 'flex', gap: 6 } },
+      LIBRARY_TABS.map(t =>
+        React.createElement('div', {
+          key: t.id,
+          onClick: () => setTab(t.id),
+          style: { padding: '7px 16px', borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: 'pointer', background: tab === t.id ? '#F5D040' : 'var(--bg-card, white)', color: tab === t.id ? '#1E1408' : 'var(--color-sub, #7A6652)', border: tab === t.id ? 'none' : '1.5px solid var(--border-color, #EAE0D0)', transition: 'all 0.15s' }
+        }, t.label)
+      )
+    ),
+    React.createElement('div', { style: { padding: '10px 20px 0' } },
       React.createElement('div', { style: { position: 'relative' } },
         React.createElement('div', { style: { position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)' } },
           React.createElement(Icon, { name: 'search' })
         ),
         React.createElement('input', {
           value: query, onChange: e => setQuery(e.target.value),
-          placeholder: 'Buscar en tu lista...',
-          style: { width: '100%', padding: '12px 16px 12px 40px', borderRadius: 14, border: '1.5px solid #EAE0D0', background: 'white', fontFamily: "'DM Sans',sans-serif", fontSize: 14, color: '#1E1408', outline: 'none' }
+          placeholder: 'Buscar alimento...',
+          style: { width: '100%', padding: '12px 16px 12px 40px', borderRadius: 14, border: '1.5px solid var(--border-color, #EAE0D0)', background: 'var(--bg-input, white)', fontFamily: "'DM Sans',sans-serif", fontSize: 14, color: 'var(--color-text, #1E1408)', outline: 'none' }
         })
       )
     ),
-    React.createElement('div', { style: { flex: 1, overflowY: 'auto', padding: '12px 20px 20px' } },
-      React.createElement('div', { style: { fontSize: 11, fontWeight: 600, color: '#9A8878', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 } }, `${filtered.length} alimentos`),
+    React.createElement('div', { style: { flex: 1, overflowY: 'auto', padding: '10px 20px 20px' } },
+      React.createElement('div', { style: { fontSize: 11, fontWeight: 600, color: 'var(--color-muted, #9A8878)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 } }, `${filtered.length} alimentos`),
       filtered.length > 0
         ? filtered.map(f => React.createElement(FoodRow, { key: f.id, food: f, onSelect: setSelected }))
         : React.createElement('div', { style: { textAlign: 'center', padding: '32px 16px' } },
             React.createElement('div', { style: { fontSize: 32, marginBottom: 8 } }, query ? '🔍' : '🥗'),
-            React.createElement('div', { style: { fontSize: 14, color: '#7A6652' } }, query ? 'No encontramos ese alimento' : 'Tu lista está vacía'),
-            React.createElement('div', { style: { fontSize: 12, color: '#9A8878', marginTop: 4 } }, query ? 'Intenta con otro nombre' : 'Toca + para agregar tu primer alimento')
+            React.createElement('div', { style: { fontSize: 14, color: 'var(--color-sub, #7A6652)' } }, query ? 'No encontramos ese alimento' : 'No hay alimentos en esta categoría'),
+            React.createElement('div', { style: { fontSize: 12, color: 'var(--color-muted, #9A8878)', marginTop: 4 } }, query ? 'Intenta con otro nombre' : 'Toca + para agregar un alimento personalizado')
           )
     ),
     showAdd && React.createElement('div', {
-      onClick: () => setShowAdd(false),
+      onClick: () => { setShowAdd(false); setEditFood(null); },
       style: { position: 'absolute', inset: 0, background: 'rgba(30,20,8,0.3)', zIndex: 40 }
     }),
-    showAdd && React.createElement(AddFoodSheet, { onClose: () => setShowAdd(false), onSave: handleSave }),
+    showAdd && React.createElement(AddFoodSheet, {
+      onClose: () => { setShowAdd(false); setEditFood(null); },
+      onSave: handleSave,
+      editFood,
+    }),
     selected && React.createElement('div', {
       onClick: () => setSelected(null),
       style: { position: 'absolute', inset: 0, background: 'rgba(30,20,8,0.3)', zIndex: 40 }
@@ -344,8 +433,9 @@ function FoodLibrary({ onBack, library, onUpdateLibrary }) {
       food: selected,
       onClose: () => setSelected(null),
       onDelete: () => handleDelete(selected),
+      onEdit: () => handleEdit(selected),
     })
   );
 }
 
-Object.assign(window, { FoodLibrary });
+Object.assign(window, { FoodLibrary, NUTRITION_DB, DB_FOODS });

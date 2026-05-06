@@ -5,16 +5,16 @@ const TRAINING_LABELS = { strength: 'Fuerza', cardio: 'Cardio', rest: 'Descanso'
 
 function WeekChart2({ weekSummary }) {
   const maxKcal = Math.max(...weekSummary.map(d => d.kcal), 2400, 100);
-  return React.createElement('div', { style: { background: 'white', borderRadius: 20, padding: '16px', boxShadow: '0 2px 12px rgba(30,20,8,0.08)', marginBottom: 14 } },
-    React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 15, fontWeight: 700, color: '#1E1408', marginBottom: 12 } }, 'Calorías esta semana'),
+  return React.createElement('div', { style: { background: 'var(--bg-card, white)', borderRadius: 20, padding: '16px', boxShadow: '0 2px 12px rgba(30,20,8,0.08)', marginBottom: 14 } },
+    React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 15, fontWeight: 700, color: 'var(--color-text, #1E1408)', marginBottom: 12 } }, 'Calorías esta semana'),
     React.createElement('div', { style: { display: 'flex', gap: 6, alignItems: 'flex-end', height: 100 } },
       weekSummary.map(d => {
         const h = Math.max(Math.round((d.kcal / maxKcal) * 88), d.kcal > 0 ? 3 : 0);
         const over = d.kcal > (d.goal || 2000);
         const logged = d.kcal > 0;
         return React.createElement('div', { key: d.day, style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 } },
-          React.createElement('div', { style: { width: '100%', background: !logged ? '#F5EFE4' : over ? '#FF8C69' : '#F5D040', borderRadius: '5px 5px 3px 3px', height: h, minHeight: logged ? 3 : 0 } }),
-          React.createElement('div', { style: { fontSize: 10, fontWeight: 600, color: '#9A8878' } }, d.day),
+          React.createElement('div', { style: { width: '100%', background: !logged ? 'var(--bg-card2, #F5EFE4)' : over ? '#FF8C69' : '#F5D040', borderRadius: '5px 5px 3px 3px', height: h, minHeight: logged ? 3 : 0 } }),
+          React.createElement('div', { style: { fontSize: 10, fontWeight: 600, color: 'var(--color-muted, #9A8878)' } }, d.day),
           React.createElement('div', { style: { width: 8, height: 8, borderRadius: 999, background: TRAINING_COLORS[d.training] || '#D4C8B4' } })
         );
       })
@@ -23,7 +23,7 @@ function WeekChart2({ weekSummary }) {
       Object.entries(TRAINING_LABELS).map(([k, v]) =>
         React.createElement('div', { key: k, style: { display: 'flex', alignItems: 'center', gap: 4 } },
           React.createElement('div', { style: { width: 8, height: 8, borderRadius: 999, background: TRAINING_COLORS[k] } }),
-          React.createElement('span', { style: { fontSize: 10, color: '#9A8878' } }, v)
+          React.createElement('span', { style: { fontSize: 10, color: 'var(--color-muted, #9A8878)' } }, v)
         )
       )
     )
@@ -44,22 +44,22 @@ function InsightCard({ type, text }) {
 }
 
 function NextWeekGoals({ goals, onChange }) {
-  return React.createElement('div', { style: { background: 'white', borderRadius: 20, padding: '16px', boxShadow: '0 2px 12px rgba(30,20,8,0.08)', marginBottom: 14 } },
+  return React.createElement('div', { style: { background: 'var(--bg-card, white)', borderRadius: 20, padding: '16px', boxShadow: '0 2px 12px rgba(30,20,8,0.08)', marginBottom: 14 } },
     React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 } },
-      React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 15, fontWeight: 700, color: '#1E1408' } }, 'Metas semana siguiente'),
+      React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 15, fontWeight: 700, color: 'var(--color-text, #1E1408)' } }, 'Metas semana siguiente'),
       React.createElement('span', { style: { fontSize: 12, fontWeight: 600, color: '#F5D040', background: '#FFF3C4', padding: '3px 10px', borderRadius: 999 } }, 'Sugerido por IA')
     ),
     goals.map((g, i) =>
-      React.createElement('div', { key: g.day, style: { display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: i < goals.length - 1 ? '1px solid #F5EFE4' : 'none' } },
-        React.createElement('div', { style: { width: 28, textAlign: 'center', fontSize: 12, fontWeight: 600, color: '#7A6652' } }, g.day),
+      React.createElement('div', { key: g.day, style: { display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: i < goals.length - 1 ? '1px solid var(--border-color, #F5EFE4)' : 'none' } },
+        React.createElement('div', { style: { width: 28, textAlign: 'center', fontSize: 12, fontWeight: 600, color: 'var(--color-sub, #7A6652)' } }, g.day),
         React.createElement('div', { style: { width: 8, height: 8, borderRadius: 999, background: TRAINING_COLORS[g.type] || '#D4C8B4', flexShrink: 0 } }),
-        React.createElement('div', { style: { flex: 1, fontSize: 12, color: '#9A8878' } }, TRAINING_LABELS[g.type] || g.type),
+        React.createElement('div', { style: { flex: 1, fontSize: 12, color: 'var(--color-muted, #9A8878)' } }, TRAINING_LABELS[g.type] || g.type),
         React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 4 } },
           React.createElement('button', {
             onClick: () => onChange(i, g.kcal - 50),
-            style: { width: 24, height: 24, borderRadius: 999, border: '1px solid #EAE0D0', background: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: '#7A6652' }
+            style: { width: 24, height: 24, borderRadius: 999, border: '1px solid var(--border-color, #EAE0D0)', background: 'var(--bg-card, white)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: 'var(--color-sub, #7A6652)' }
           }, '−'),
-          React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 14, fontWeight: 800, color: '#1E1408', minWidth: 44, textAlign: 'center' } }, g.kcal),
+          React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 14, fontWeight: 800, color: 'var(--color-text, #1E1408)', minWidth: 44, textAlign: 'center' } }, g.kcal),
           React.createElement('button', {
             onClick: () => onChange(i, g.kcal + 50),
             style: { width: 24, height: 24, borderRadius: 999, background: '#F5D040', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700 }
@@ -70,7 +70,7 @@ function NextWeekGoals({ goals, onChange }) {
   );
 }
 
-function WeeklyAnalysis({ onBack, dailyLog, dailyGoals, userData }) {
+function WeeklyAnalysis({ onBack, dailyLog, dailyGoals, userData, onUpdateGoals }) {
   const goalKcal = dailyGoals ? dailyGoals.kcal : 2000;
 
   // Build week data from dailyLog
@@ -86,8 +86,8 @@ function WeeklyAnalysis({ onBack, dailyLog, dailyGoals, userData }) {
     const kcal = Math.round(dayMeals.reduce((s, m) => s + (m.totalKcal || 0), 0));
     const routine = userData && userData.routine ? userData.routine : {};
     const dayName = DAYS_FULL[d.getDay()];
-    const routineDay = Object.keys(routine).find(k => k.startsWith(dayName.slice(0, 3)));
-    return { day: DAYS_SHORT[d.getDay()], kcal, goal: goalKcal, training: routineDay ? routine[routineDay] : 'rest', logged: dayMeals.length > 0 };
+    const training = routine[dayName] || 'rest';
+    return { day: DAYS_SHORT[d.getDay()], kcal, goal: goalKcal, training, logged: dayMeals.length > 0 };
   });
 
   const totalKcal    = weekSummary.filter(d => d.logged).reduce((s, d) => s + d.kcal, 0);
@@ -133,14 +133,14 @@ function WeeklyAnalysis({ onBack, dailyLog, dailyGoals, userData }) {
   const [confirmed, setConfirmed] = React.useState(false);
 
   if (confirmed) {
-    return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 16, padding: 24 } },
+    return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 16, padding: 24, background: 'var(--bg-main, #FEFAF3)' } },
       React.createElement('div', { style: { width: 64, height: 64, background: '#D8F5DB', borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
         React.createElement('svg', { width: 32, height: 32, viewBox: '0 0 24 24', fill: 'none', stroke: '#6BCB77', strokeWidth: 2.5, strokeLinecap: 'round', strokeLinejoin: 'round' },
           React.createElement('polyline', { points: '20 6 9 17 4 12' })
         )
       ),
-      React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 22, fontWeight: 800, color: '#1E1408', textAlign: 'center' } }, '¡Metas actualizadas!'),
-      React.createElement('div', { style: { fontSize: 14, color: '#7A6652', textAlign: 'center' } }, 'Tus metas para la próxima semana han sido guardadas.'),
+      React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 22, fontWeight: 800, color: 'var(--color-text, #1E1408)', textAlign: 'center' } }, '¡Metas actualizadas!'),
+      React.createElement('div', { style: { fontSize: 14, color: 'var(--color-sub, #7A6652)', textAlign: 'center' } }, 'Tus metas para la próxima semana han sido guardadas.'),
       React.createElement('button', {
         onClick: onBack,
         style: { marginTop: 8, background: '#F5D040', border: 'none', borderRadius: 999, padding: '14px 32px', fontFamily: "'DM Sans',sans-serif", fontSize: 16, fontWeight: 600, cursor: 'pointer' }
@@ -148,12 +148,12 @@ function WeeklyAnalysis({ onBack, dailyLog, dailyGoals, userData }) {
     );
   }
 
-  return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', height: '100%' } },
+  return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-main, #FEFAF3)' } },
     React.createElement('div', { style: { padding: '12px 20px 16px', display: 'flex', alignItems: 'center', gap: 12 } },
       React.createElement('div', { onClick: onBack, style: { cursor: 'pointer', padding: 4 } },
         React.createElement(Icon, { name: 'back' })
       ),
-      React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 20, fontWeight: 800, color: '#1E1408' } }, 'Análisis semanal')
+      React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 20, fontWeight: 800, color: 'var(--color-text, #1E1408)' } }, 'Análisis semanal')
     ),
     React.createElement('div', { style: { flex: 1, overflowY: 'auto', padding: '0 16px 20px' } },
       React.createElement('div', { style: { display: 'flex', gap: 10, marginBottom: 14 } },
@@ -162,21 +162,27 @@ function WeeklyAnalysis({ onBack, dailyLog, dailyGoals, userData }) {
           { label: 'Promedio/día', val: avgKcal > 0 ? avgKcal.toLocaleString() : '—', unit: 'kcal', color: '#FFAB5E' },
           { label: 'Días en meta', val: `${daysOnTarget}/${daysLogged || 7}`, unit: '', color: '#6BCB77' },
         ].map(s =>
-          React.createElement('div', { key: s.label, style: { flex: 1, background: 'white', borderRadius: 14, padding: '12px 10px', textAlign: 'center', boxShadow: '0 2px 8px rgba(30,20,8,0.07)' } },
+          React.createElement('div', { key: s.label, style: { flex: 1, background: 'var(--bg-card, white)', borderRadius: 14, padding: '12px 10px', textAlign: 'center', boxShadow: '0 2px 8px rgba(30,20,8,0.07)' } },
             React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 20, fontWeight: 900, color: s.color } }, s.val),
-            s.unit && React.createElement('div', { style: { fontSize: 9, color: '#9A8878', fontWeight: 500 } }, s.unit),
-            React.createElement('div', { style: { fontSize: 10, color: '#7A6652', marginTop: 2 } }, s.label)
+            s.unit && React.createElement('div', { style: { fontSize: 9, color: 'var(--color-muted, #9A8878)', fontWeight: 500 } }, s.unit),
+            React.createElement('div', { style: { fontSize: 10, color: 'var(--color-sub, #7A6652)', marginTop: 2 } }, s.label)
           )
         )
       ),
       React.createElement(WeekChart2, { weekSummary }),
       React.createElement('div', { style: { marginBottom: 14 } },
-        React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 15, fontWeight: 700, color: '#1E1408', marginBottom: 10 } }, 'Observaciones'),
+        React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 15, fontWeight: 700, color: 'var(--color-text, #1E1408)', marginBottom: 10 } }, 'Observaciones'),
         insights.map((ins, i) => React.createElement(InsightCard, { key: i, ...ins }))
       ),
       React.createElement(NextWeekGoals, { goals: nextWeek, onChange: updateGoal }),
       React.createElement('button', {
-        onClick: () => setConfirmed(true),
+        onClick: () => {
+          if (onUpdateGoals) {
+            const avgKcalNext = Math.round(nextWeek.reduce((s, d) => s + d.kcal, 0) / nextWeek.length);
+            onUpdateGoals({ ...dailyGoals, kcal: avgKcalNext });
+          }
+          setConfirmed(true);
+        },
         style: { width: '100%', background: '#F5D040', border: 'none', borderRadius: 999, padding: '15px', fontFamily: "'DM Sans',sans-serif", fontSize: 16, fontWeight: 600, color: '#1E1408', cursor: 'pointer', boxShadow: '0 2px 8px rgba(245,208,64,0.35)' }
       }, 'Confirmar metas para la próxima semana')
     )

@@ -38,11 +38,21 @@ const TRAINING_TYPES = [
   { id: 'rest',     label: 'Descanso', color: '#B8A898', bg: '#F5EFE4' },
 ];
 
-function StepHeader({ step, total, title, sub }) {
+function StepHeader({ step, total, title, sub, onBack }) {
   return React.createElement('div', { style: { padding: '16px 24px 20px' } },
-    React.createElement('div', { style: { display: 'flex', gap: 4, marginBottom: 16 } },
-      Array.from({ length: total }, (_, i) =>
-        React.createElement('div', { key: i, style: { flex: 1, height: 3, borderRadius: 999, background: i <= step ? '#F5D040' : '#EAE0D0', transition: 'background 0.3s' } })
+    React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 } },
+      onBack && React.createElement('div', {
+        onClick: onBack,
+        style: { cursor: 'pointer', padding: 4, marginRight: 4, display: 'flex', alignItems: 'center' }
+      },
+        React.createElement('svg', { width: 22, height: 22, viewBox: '0 0 24 24', fill: 'none', stroke: '#1E1408', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' },
+          React.createElement('polyline', { points: '15 18 9 12 15 6' })
+        )
+      ),
+      React.createElement('div', { style: { display: 'flex', gap: 4, flex: 1 } },
+        Array.from({ length: total }, (_, i) =>
+          React.createElement('div', { key: i, style: { flex: 1, height: 3, borderRadius: 999, background: i <= step ? '#F5D040' : '#EAE0D0', transition: 'background 0.3s' } })
+        )
       )
     ),
     React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 22, fontWeight: 800, color: '#1E1408', lineHeight: 1.2 } }, title),
@@ -135,9 +145,9 @@ function WelcomeStep({ onNext }) {
   );
 }
 
-function GoalStep({ data, setData, onNext }) {
+function GoalStep({ data, setData, onNext, onBack }) {
   return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', height: '100%' } },
-    React.createElement(StepHeader, { step: 0, total: 7, title: '¿Cuál es tu objetivo?', sub: 'Esto nos ayudará a calcular tus metas nutricionales.' }),
+    React.createElement(StepHeader, { step: 0, total: 7, title: '¿Cuál es tu objetivo?', sub: 'Esto nos ayudará a calcular tus metas nutricionales.', onBack }),
     React.createElement('div', { style: { flex: 1, overflowY: 'auto', padding: '0 24px' } },
       GOALS.map(g =>
         React.createElement('div', {
@@ -162,9 +172,9 @@ function GoalStep({ data, setData, onNext }) {
   );
 }
 
-function PersonalStep({ data, setData, onNext }) {
+function PersonalStep({ data, setData, onNext, onBack }) {
   return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', height: '100%' } },
-    React.createElement(StepHeader, { step: 1, total: 7, title: 'Cuéntanos de ti', sub: 'Información básica para personalizar tu plan.' }),
+    React.createElement(StepHeader, { step: 1, total: 7, title: 'Cuéntanos de ti', sub: 'Información básica para personalizar tu plan.', onBack }),
     React.createElement('div', { style: { flex: 1, overflowY: 'auto', padding: '0 24px' } },
       React.createElement(LabeledInput, { label: 'Nombre', placeholder: 'Tu nombre', value: data.name || '', onChange: e => setData({ ...data, name: e.target.value }) }),
       React.createElement(LabeledInput, { label: 'Edad', placeholder: '25', type: 'number', value: data.age || '', onChange: e => setData({ ...data, age: e.target.value }), suffix: 'años' }),
@@ -195,9 +205,9 @@ function PersonalStep({ data, setData, onNext }) {
   );
 }
 
-function BodyStep({ data, setData, onNext }) {
+function BodyStep({ data, setData, onNext, onBack }) {
   return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', height: '100%' } },
-    React.createElement(StepHeader, { step: 2, total: 7, title: 'Medidas corporales', sub: 'Para calcular tu tasa metabólica basal.' }),
+    React.createElement(StepHeader, { step: 2, total: 7, title: 'Medidas corporales', sub: 'Para calcular tu tasa metabólica basal.', onBack }),
     React.createElement('div', { style: { flex: 1, overflowY: 'auto', padding: '0 24px' } },
       React.createElement(LabeledInput, { label: 'Peso actual', placeholder: '70', type: 'number', value: data.weight || '', onChange: e => setData({ ...data, weight: e.target.value }), suffix: 'kg' }),
       React.createElement(LabeledInput, { label: 'Peso objetivo', placeholder: '65', type: 'number', value: data.targetWeight || '', onChange: e => setData({ ...data, targetWeight: e.target.value }), suffix: 'kg' }),
@@ -213,9 +223,9 @@ function BodyStep({ data, setData, onNext }) {
   );
 }
 
-function ActivityStep({ data, setData, onNext }) {
+function ActivityStep({ data, setData, onNext, onBack }) {
   return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', height: '100%' } },
-    React.createElement(StepHeader, { step: 3, total: 7, title: 'Nivel de actividad', sub: '¿Cuánto ejercicio haces normalmente?' }),
+    React.createElement(StepHeader, { step: 3, total: 7, title: 'Nivel de actividad', sub: '¿Cuánto ejercicio haces normalmente?', onBack }),
     React.createElement('div', { style: { flex: 1, overflowY: 'auto', padding: '0 24px' } },
       ACTIVITY_LEVELS.map(a =>
         React.createElement('div', {
@@ -257,12 +267,12 @@ function ActivityStep({ data, setData, onNext }) {
   );
 }
 
-function RoutineStep({ data, setData, onNext }) {
+function RoutineStep({ data, setData, onNext, onBack }) {
   const routine = data.routine || {};
   function setDay(day, type) { setData({ ...data, routine: { ...routine, [day]: type } }); }
 
   return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', height: '100%' } },
-    React.createElement(StepHeader, { step: 4, total: 7, title: 'Tu rutina semanal', sub: 'Indica el tipo de actividad para cada día.' }),
+    React.createElement(StepHeader, { step: 4, total: 7, title: 'Tu rutina semanal', sub: 'Indica el tipo de actividad para cada día.', onBack }),
     React.createElement('div', { style: { flex: 1, overflowY: 'auto', padding: '0 24px' } },
       DAYS.map(day =>
         React.createElement('div', { key: day, style: { marginBottom: 12 } },
@@ -282,12 +292,12 @@ function RoutineStep({ data, setData, onNext }) {
   );
 }
 
-function PersonalGoalStep({ data, setData, onNext }) {
+function PersonalGoalStep({ data, setData, onNext, onBack }) {
   const maxChars = 300;
   const charCount = (data.personalGoal || '').length;
 
   return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', height: '100%' } },
-    React.createElement(StepHeader, { step: 5, total: 7, title: 'Describe tu meta ✨', sub: 'Opcional — Cuéntanos con tus propias palabras qué quieres lograr. Esto será analizado por IA para darte una experiencia más personalizada.' }),
+    React.createElement(StepHeader, { step: 5, total: 7, title: 'Describe tu meta ✨', sub: 'Opcional — Cuéntanos con tus propias palabras qué quieres lograr. Esto será analizado por IA para darte una experiencia más personalizada.', onBack }),
     React.createElement('div', { style: { flex: 1, overflowY: 'auto', padding: '0 24px' } },
 
       // Decorative AI badge
@@ -396,7 +406,7 @@ function PersonalGoalStep({ data, setData, onNext }) {
   );
 }
 
-function SummaryStep({ data, onFinish }) {
+function SummaryStep({ data, onFinish, onBack }) {
   const w = parseFloat(data.weight) || 70;
   const h = parseFloat(data.height) || 170;
   const a = parseFloat(data.age) || 25;
@@ -417,7 +427,7 @@ function SummaryStep({ data, onFinish }) {
   };
 
   return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', height: '100%' } },
-    React.createElement(StepHeader, { step: 6, total: 7, title: `¡Listo, ${data.name || 'campeón'}! 🎉`, sub: 'Tu plan nutricional está listo.' }),
+    React.createElement(StepHeader, { step: 6, total: 7, title: `¡Listo, ${data.name || 'campeón'}! 🎉`, sub: 'Tu plan nutricional está listo.', onBack }),
     React.createElement('div', { style: { flex: 1, overflowY: 'auto', padding: '0 24px' } },
       React.createElement('div', { style: { background: 'white', borderRadius: 20, padding: 20, boxShadow: '0 2px 12px rgba(30,20,8,0.08)', marginBottom: 14, textAlign: 'center' } },
         React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 48, fontWeight: 900, color: '#F5D040', lineHeight: 1 } }, targetKcal.toLocaleString()),
@@ -428,7 +438,7 @@ function SummaryStep({ data, onFinish }) {
         [
           ['Objetivo', GOAL_LABELS[data.goal] || '—'],
           ['Peso actual', `${data.weight} kg`],
-          ['Peso objetivo', `${data.targetWeight || '—'} kg`],
+          ['Peso objetivo', data.targetWeight ? `${data.targetWeight} kg` : '—'],
           ['Altura', `${data.height} cm`],
           ['Proteína sugerida', `${suggestedGoals.protein}g / día`],
           ['Actividad', data.activity],
@@ -449,15 +459,18 @@ function Onboarding({ onComplete }) {
   const [step, setStep] = React.useState(0);
   const [data, setData] = React.useState({});
 
+  function goNext() { setStep(s => s + 1); }
+  function goBack() { setStep(s => Math.max(0, s - 1)); }
+
   const steps = [
-    React.createElement(WelcomeStep, { onNext: () => setStep(1) }),
-    React.createElement(GoalStep, { data, setData, onNext: () => setStep(2) }),
-    React.createElement(PersonalStep, { data, setData, onNext: () => setStep(3) }),
-    React.createElement(BodyStep, { data, setData, onNext: () => setStep(4) }),
-    React.createElement(ActivityStep, { data, setData, onNext: () => setStep(5) }),
-    React.createElement(RoutineStep, { data, setData, onNext: () => setStep(6) }),
-    React.createElement(PersonalGoalStep, { data, setData, onNext: () => setStep(7) }),
-    React.createElement(SummaryStep, { data, onFinish: onComplete }),
+    React.createElement(WelcomeStep, { onNext: goNext }),
+    React.createElement(GoalStep, { data, setData, onNext: goNext, onBack: goBack }),
+    React.createElement(PersonalStep, { data, setData, onNext: goNext, onBack: goBack }),
+    React.createElement(BodyStep, { data, setData, onNext: goNext, onBack: goBack }),
+    React.createElement(ActivityStep, { data, setData, onNext: goNext, onBack: goBack }),
+    React.createElement(RoutineStep, { data, setData, onNext: goNext, onBack: goBack }),
+    React.createElement(PersonalGoalStep, { data, setData, onNext: goNext, onBack: goBack }),
+    React.createElement(SummaryStep, { data, onFinish: onComplete, onBack: goBack }),
   ];
 
   return steps[step] || null;
