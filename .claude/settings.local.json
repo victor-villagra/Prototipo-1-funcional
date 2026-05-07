@@ -9,6 +9,9 @@
       "Bash(tar xzf *)",
       "Bash(git -C \"c:/Users/victo/Documents/Proyectos/Prototipo 1\" status)",
       "Bash(node -e ' *)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\victo\\.claude\\projects\\c--Users-victo-Documents-KCalia-Prototipo-1---copia-1\\memory"
     ]
   }
 }

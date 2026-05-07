@@ -57,12 +57,14 @@ function NextWeekGoals({ goals, onChange }) {
         React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 4 } },
           React.createElement('button', {
             onClick: () => onChange(i, g.kcal - 50),
-            style: { width: 24, height: 24, borderRadius: 999, border: '1px solid var(--border-color, #EAE0D0)', background: 'var(--bg-card, white)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: 'var(--color-sub, #7A6652)' }
+            disabled: g.kcal <= 1000,
+            style: { width: 24, height: 24, borderRadius: 999, border: '1px solid var(--border-color, #EAE0D0)', background: 'var(--bg-card, white)', cursor: g.kcal <= 1000 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: g.kcal <= 1000 ? '#D4C8B4' : 'var(--color-sub, #7A6652)', opacity: g.kcal <= 1000 ? 0.5 : 1 }
           }, '−'),
           React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 14, fontWeight: 800, color: 'var(--color-text, #1E1408)', minWidth: 44, textAlign: 'center' } }, g.kcal),
           React.createElement('button', {
             onClick: () => onChange(i, g.kcal + 50),
-            style: { width: 24, height: 24, borderRadius: 999, background: '#F5D040', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700 }
+            disabled: g.kcal >= 4000,
+            style: { width: 24, height: 24, borderRadius: 999, background: g.kcal >= 4000 ? '#EAE0D0' : '#F5D040', border: 'none', cursor: g.kcal >= 4000 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, opacity: g.kcal >= 4000 ? 0.5 : 1 }
           }, '+')
         )
       )
@@ -108,8 +110,10 @@ function WeeklyAnalysis({ onBack, dailyLog, dailyGoals, userData, onUpdateGoals 
     });
   });
 
+  const KCAL_MIN = 1000;
+  const KCAL_MAX = 4000;
   function updateGoal(idx, val) {
-    setNextWeek(prev => prev.map((g, i) => i === idx ? { ...g, kcal: Math.max(1000, Math.min(4000, val)) } : g));
+    setNextWeek(prev => prev.map((g, i) => i === idx ? { ...g, kcal: Math.max(KCAL_MIN, Math.min(KCAL_MAX, val)) } : g));
   }
 
   // Auto-generate insights

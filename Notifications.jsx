@@ -25,20 +25,26 @@ function generateAppNotifications(todayMeals, dailyGoals, dailyLog, userData, ex
   const todayStr = now.toDateString();
   const hour = now.getHours();
 
-  const has = (subtype) => existing.some(n =>
-    n.subtype === subtype && new Date(n.timestamp).toDateString() === todayStr
-  );
+  // Deduplication: meal reminders by hour-window, one-per-day for rest
+  const has = (subtype, windowHours = 24) => existing.some(n => {
+    if (n.subtype !== subtype) return false;
+    const ts = new Date(n.timestamp);
+    if (isNaN(ts.getTime())) return false;
+    const diffH = (now - ts) / 3600000;
+    return diffH < windowHours;
+  });
 
   // ── Meal reminders ──
   if (prefs.mealReminders) {
-    if (hour >= 7 && hour < 11 && todayMeals.length === 0 && !has('breakfast_rem')) {
+    // Use 4h window so reminders don't repeat within the same meal window
+    if (hour >= 7 && hour < 11 && todayMeals.length === 0 && !has('breakfast_rem', 4)) {
       out.push({ type: 'reminder', subtype: 'breakfast_rem', title: '¿Ya desayunaste? 🍳', message: 'Registra tu desayuno para mantener el seguimiento al día.', action: { screen: 'add', mealName: 'Desayuno' } });
     }
-    if (hour >= 12 && hour < 15 && !has('lunch_rem')) {
+    if (hour >= 12 && hour < 15 && !has('lunch_rem', 3)) {
       const hasLunch = todayMeals.some(m => (m.name || '').toLowerCase().includes('almuerzo'));
       if (!hasLunch) out.push({ type: 'reminder', subtype: 'lunch_rem', title: 'Hora del almuerzo 🍽️', message: 'No olvides registrar tu almuerzo para no perder el seguimiento.', action: { screen: 'add', mealName: 'Almuerzo' } });
     }
-    if (hour >= 19 && hour < 23 && !has('dinner_rem')) {
+    if (hour >= 19 && hour < 23 && !has('dinner_rem', 4)) {
       const hasDinner = todayMeals.some(m => (m.name || '').toLowerCase().includes('cena'));
       if (!hasDinner) out.push({ type: 'reminder', subtype: 'dinner_rem', title: '¿Ya cenaste? 🌙', message: 'Registra tu cena antes de terminar el día.', action: { screen: 'add', mealName: 'Cena' } });
     }
@@ -99,7 +105,8 @@ function generateAppNotifications(todayMeals, dailyGoals, dailyLog, userData, ex
     }
   }
 
-  return out.map(n => ({ ...n, id: Date.now() + Math.random(), read: false, timestamp: now.toISOString() }));
+  let _idBase = Date.now();
+  return out.map(n => ({ ...n, id: String(++_idBase) + '_' + n.subtype, read: false, timestamp: now.toISOString() }));
 }
 
 // ── Notification Center ───────────────────────────────────────────

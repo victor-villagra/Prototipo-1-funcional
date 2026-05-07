@@ -134,13 +134,16 @@ function EditGoalsSheet({ goals, onClose, onSave }) {
         React.createElement('div', { style: { fontSize: 13, fontWeight: 600, color: 'var(--color-sub, #5A4838)', marginBottom: 5 } }, f.label),
         React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } },
           React.createElement('button', {
-            onClick: () => setValues(v => ({ ...v, [f.key]: Math.max(0, (v[f.key] || 0) - (f.key === 'kcal' ? 50 : 5)) })),
+            onClick: () => setValues(v => ({ ...v, [f.key]: Math.max(f.key === 'kcal' ? 500 : 0, (v[f.key] || 0) - (f.key === 'kcal' ? 50 : 5)) })),
             style: { width: 36, height: 36, borderRadius: 999, border: '1.5px solid var(--border-color, #EAE0D0)', background: 'var(--bg-card, white)', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: 'var(--color-text, #1E1408)' }
           }, '−'),
           React.createElement('input', {
             type: 'number',
             value: values[f.key] || 0,
-            onChange: e => setValues(v => ({ ...v, [f.key]: parseFloat(e.target.value) || 0 })),
+            onChange: e => {
+              const v = parseFloat(e.target.value);
+              if (!isNaN(v) && v >= 0) setValues(prev => ({ ...prev, [f.key]: v }));
+            },
             style: { flex: 1, textAlign: 'center', padding: '10px', borderRadius: 12, border: `1.5px solid ${f.color}44`, fontFamily: "'Nunito',sans-serif", fontSize: 18, fontWeight: 800, color: 'var(--color-text, #1E1408)', background: 'var(--bg-input, white)', outline: 'none' }
           }),
           React.createElement('button', {
@@ -172,11 +175,11 @@ function EditProfileSheet({ userData, onClose, onSave }) {
   function update(key, val) { setForm(f => ({ ...f, [key]: val })); }
 
   const fields = [
-    { key: 'name',         label: 'Nombre',           type: 'text',   placeholder: 'Tu nombre' },
-    { key: 'age',          label: 'Edad',              type: 'number', placeholder: 'Años' },
-    { key: 'weight',       label: 'Peso actual (kg)',  type: 'number', placeholder: 'kg' },
-    { key: 'targetWeight', label: 'Peso objetivo (kg)',type: 'number', placeholder: 'kg' },
-    { key: 'height',       label: 'Altura (cm)',       type: 'number', placeholder: 'cm' },
+    { key: 'name',         label: 'Nombre',            type: 'text',   placeholder: 'Tu nombre',  min: null, max: null },
+    { key: 'age',          label: 'Edad',               type: 'number', placeholder: 'Años',       min: 10,   max: 110 },
+    { key: 'weight',       label: 'Peso actual (kg)',   type: 'number', placeholder: 'kg',         min: 20,   max: 500 },
+    { key: 'targetWeight', label: 'Peso objetivo (kg)', type: 'number', placeholder: 'kg',         min: 20,   max: 500 },
+    { key: 'height',       label: 'Altura (cm)',        type: 'number', placeholder: 'cm',         min: 50,   max: 300 },
   ];
 
   return React.createElement('div', {
@@ -194,7 +197,20 @@ function EditProfileSheet({ userData, onClose, onSave }) {
         React.createElement('div', { style: { fontSize: 13, fontWeight: 600, color: 'var(--color-sub, #5A4838)', marginBottom: 5 } }, f.label),
         React.createElement('input', {
           type: f.type, placeholder: f.placeholder, value: form[f.key],
-          onChange: e => update(f.key, f.type === 'number' ? (e.target.value === '' ? '' : parseFloat(e.target.value)) : e.target.value),
+          min: f.min !== null ? f.min : undefined,
+          max: f.max !== null ? f.max : undefined,
+          onChange: e => {
+            if (f.type === 'number') {
+              if (e.target.value === '') { update(f.key, ''); return; }
+              const v = parseFloat(e.target.value);
+              if (isNaN(v)) return;
+              if (f.min !== null && v < f.min) return;
+              if (f.max !== null && v > f.max) return;
+              update(f.key, v);
+            } else {
+              update(f.key, e.target.value.slice(0, 60));
+            }
+          },
           style: { width: '100%', padding: '12px 14px', borderRadius: 12, border: '1.5px solid var(--border-color, #EAE0D0)', background: 'var(--bg-input, white)', fontFamily: "'DM Sans',sans-serif", fontSize: 15, color: 'var(--color-text, #1E1408)', outline: 'none' }
         })
       )

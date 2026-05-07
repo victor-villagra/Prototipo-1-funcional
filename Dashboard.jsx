@@ -9,18 +9,19 @@ const MEAL_COLORS = [
 ];
 
 function CalorieRing({ consumed, goal }) {
-  const pct = Math.min(consumed / (goal || 2000), 1);
+  const safeGoal = (goal && goal > 0) ? goal : 2000;
+  const pct = Math.min(consumed / safeGoal, 1);
   const r = 72, cx = 90, cy = 90;
   const circ = 2 * Math.PI * r;
   const dash = circ * pct;
-  const remaining = Math.max((goal || 2000) - consumed, 0);
+  const remaining = Math.max(safeGoal - consumed, 0);
 
   return React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 20 } },
     React.createElement('svg', { width: 180, height: 180, viewBox: '0 0 180 180' },
       React.createElement('circle', { cx, cy, r, fill: 'none', stroke: 'var(--border-color, #EAE0D0)', strokeWidth: 12 }),
       React.createElement('circle', {
         cx, cy, r, fill: 'none',
-        stroke: consumed > goal ? '#FF8C69' : '#F5C030', strokeWidth: 12,
+        stroke: consumed > safeGoal ? '#FF8C69' : '#F5C030', strokeWidth: 12,
         strokeDasharray: `${dash} ${circ - dash}`,
         strokeLinecap: 'round',
         transform: `rotate(-90 ${cx} ${cy})`,
@@ -32,14 +33,14 @@ function CalorieRing({ consumed, goal }) {
     React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 12 } },
       React.createElement('div', null,
         React.createElement('div', { style: { fontSize: 11, color: 'var(--color-muted, #9A8878)', fontWeight: 500 } }, 'Meta'),
-        React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 20, fontWeight: 800, color: 'var(--color-text, #1E1408)' } }, (goal || 2000).toLocaleString()),
+        React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 20, fontWeight: 800, color: 'var(--color-text, #1E1408)' } }, safeGoal.toLocaleString()),
       ),
       React.createElement('div', null,
         React.createElement('div', { style: { fontSize: 11, color: 'var(--color-muted, #9A8878)', fontWeight: 500 } }, 'Restante'),
         React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 20, fontWeight: 800, color: remaining > 0 ? '#6BCB77' : '#FF8C69' } }, remaining.toLocaleString()),
       ),
-      React.createElement('div', { style: { background: consumed > goal ? '#FFE0E0' : '#FFF3C4', borderRadius: 999, padding: '4px 12px' } },
-        React.createElement('span', { style: { fontSize: 12, fontWeight: 600, color: consumed > goal ? '#C03030' : '#9A6D00' } }, `${Math.round(pct * 100)}% completado`)
+      React.createElement('div', { style: { background: consumed > safeGoal ? '#FFE0E0' : '#FFF3C4', borderRadius: 999, padding: '4px 12px' } },
+        React.createElement('span', { style: { fontSize: 12, fontWeight: 600, color: consumed > safeGoal ? '#C03030' : '#9A6D00' } }, `${Math.round(pct * 100)}% completado`)
       )
     )
   );

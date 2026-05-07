@@ -26,17 +26,20 @@ function Icon({ name, active = false }) {
   });
 }
 
+function _fmtTime(d) { return d.getHours() + ':' + String(d.getMinutes()).padStart(2, '0'); }
+
 function StatusBar() {
-  const [time, setTime] = React.useState(() => {
-    const now = new Date();
-    return now.getHours() + ':' + String(now.getMinutes()).padStart(2, '0');
-  });
+  const [time, setTime] = React.useState(() => _fmtTime(new Date()));
   React.useEffect(() => {
-    const id = setInterval(() => {
-      const now = new Date();
-      setTime(now.getHours() + ':' + String(now.getMinutes()).padStart(2, '0'));
-    }, 60000);
-    return () => clearInterval(id);
+    // Sync to the start of the next minute so the clock is always accurate
+    const now = new Date();
+    const msUntilNextMinute = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
+    let intervalId;
+    const timeoutId = setTimeout(() => {
+      setTime(_fmtTime(new Date()));
+      intervalId = setInterval(() => setTime(_fmtTime(new Date())), 60000);
+    }, msUntilNextMinute);
+    return () => { clearTimeout(timeoutId); clearInterval(intervalId); };
   }, []);
   return React.createElement('div', {
     style: {

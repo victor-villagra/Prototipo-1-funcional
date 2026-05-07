@@ -176,8 +176,13 @@ function PersonalStep({ data, setData, onNext, onBack }) {
   return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', height: '100%' } },
     React.createElement(StepHeader, { step: 1, total: 7, title: 'Cuéntanos de ti', sub: 'Información básica para personalizar tu plan.', onBack }),
     React.createElement('div', { style: { flex: 1, overflowY: 'auto', padding: '0 24px' } },
-      React.createElement(LabeledInput, { label: 'Nombre', placeholder: 'Tu nombre', value: data.name || '', onChange: e => setData({ ...data, name: e.target.value }) }),
-      React.createElement(LabeledInput, { label: 'Edad', placeholder: '25', type: 'number', value: data.age || '', onChange: e => setData({ ...data, age: e.target.value }), suffix: 'años' }),
+      React.createElement(LabeledInput, { label: 'Nombre', placeholder: 'Tu nombre', value: data.name || '', onChange: e => setData({ ...data, name: e.target.value.slice(0, 60) }) }),
+      React.createElement(LabeledInput, { label: 'Edad', placeholder: '25', type: 'number', value: data.age || '', onChange: e => {
+        const raw = e.target.value;
+        if (raw === '') { setData({ ...data, age: '' }); return; }
+        const v = parseInt(raw, 10);
+        if (!isNaN(v) && v <= 110) setData({ ...data, age: v });
+      }, suffix: 'años' }),
       React.createElement('div', { style: { marginBottom: 14 } },
         React.createElement('div', { style: { fontSize: 13, fontWeight: 600, color: '#5A4838', marginBottom: 6 } }, 'Sexo'),
         React.createElement('div', { style: { display: 'flex', gap: 10 } },
@@ -209,10 +214,25 @@ function BodyStep({ data, setData, onNext, onBack }) {
   return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', height: '100%' } },
     React.createElement(StepHeader, { step: 2, total: 7, title: 'Medidas corporales', sub: 'Para calcular tu tasa metabólica basal.', onBack }),
     React.createElement('div', { style: { flex: 1, overflowY: 'auto', padding: '0 24px' } },
-      React.createElement(LabeledInput, { label: 'Peso actual', placeholder: '70', type: 'number', value: data.weight || '', onChange: e => setData({ ...data, weight: e.target.value }), suffix: 'kg' }),
-      React.createElement(LabeledInput, { label: 'Peso objetivo', placeholder: '65', type: 'number', value: data.targetWeight || '', onChange: e => setData({ ...data, targetWeight: e.target.value }), suffix: 'kg' }),
-      React.createElement(LabeledInput, { label: 'Altura', placeholder: '175', type: 'number', value: data.height || '', onChange: e => setData({ ...data, height: e.target.value }), suffix: 'cm' }),
-      data.weight && data.height && React.createElement('div', { style: { background: '#FFF3C4', borderRadius: 14, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+      React.createElement(LabeledInput, { label: 'Peso actual', placeholder: '70', type: 'number', value: data.weight || '', onChange: e => {
+        const raw = e.target.value;
+        if (raw === '') { setData({ ...data, weight: '' }); return; }
+        const v = parseFloat(raw);
+        if (!isNaN(v) && v <= 500) setData({ ...data, weight: v });
+      }, suffix: 'kg' }),
+      React.createElement(LabeledInput, { label: 'Peso objetivo', placeholder: '65', type: 'number', value: data.targetWeight || '', onChange: e => {
+        const raw = e.target.value;
+        if (raw === '') { setData({ ...data, targetWeight: '' }); return; }
+        const v = parseFloat(raw);
+        if (!isNaN(v) && v <= 500) setData({ ...data, targetWeight: v });
+      }, suffix: 'kg' }),
+      React.createElement(LabeledInput, { label: 'Altura', placeholder: '175', type: 'number', value: data.height || '', onChange: e => {
+        const raw = e.target.value;
+        if (raw === '') { setData({ ...data, height: '' }); return; }
+        const v = parseFloat(raw);
+        if (!isNaN(v) && v <= 300) setData({ ...data, height: v });
+      }, suffix: 'cm' }),
+      data.weight && data.height && data.height > 0 && React.createElement('div', { style: { background: '#FFF3C4', borderRadius: 14, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
         React.createElement('span', { style: { fontSize: 13, color: '#7A6652', fontWeight: 500 } }, 'IMC estimado'),
         React.createElement('span', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 18, fontWeight: 800, color: '#9A6D00' } },
           (data.weight / ((data.height / 100) ** 2)).toFixed(1)

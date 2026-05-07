@@ -151,15 +151,16 @@ function CartSheet({ items, onRemove, onClose, onConfirm, mealName }) {
     ),
     React.createElement('button', {
       onClick: onConfirm,
-      style: { width: '100%', background: '#F5D040', border: 'none', borderRadius: 999, padding: '15px', fontFamily: "'DM Sans',sans-serif", fontSize: 16, fontWeight: 600, color: '#1E1408', cursor: 'pointer', boxShadow: '0 2px 8px rgba(245,208,64,0.3)' }
+      disabled: items.length === 0,
+      style: { width: '100%', background: items.length > 0 ? '#F5D040' : '#EAE0D0', border: 'none', borderRadius: 999, padding: '15px', fontFamily: "'DM Sans',sans-serif", fontSize: 16, fontWeight: 600, color: items.length > 0 ? '#1E1408' : '#B8A898', cursor: items.length > 0 ? 'pointer' : 'not-allowed', boxShadow: items.length > 0 ? '0 2px 8px rgba(245,208,64,0.3)' : 'none' }
     }, `Registrar ${items.length} alimento${items.length !== 1 ? 's' : ''}`)
   );
 }
 
-function AddMeal({ onBack, onAddMeal, mealName: initialName = '', foodLibrary }) {
+function AddMeal({ onBack, onAddMeal, onGoToLibrary, mealName: initialName = '', foodLibrary, initialCart = [] }) {
   const [query, setQuery]         = React.useState('');
   const [mealName, setMealName]   = React.useState(initialName);
-  const [cart, setCart]           = React.useState([]);
+  const [cart, setCart]           = React.useState(initialCart);
   const [selecting, setSelecting] = React.useState(null);
   const [viewCart, setViewCart]   = React.useState(false);
   const [confirmed, setConfirmed] = React.useState(false);
@@ -178,6 +179,7 @@ function AddMeal({ onBack, onAddMeal, mealName: initialName = '', foodLibrary })
   }
 
   function confirmAll() {
+    if (cart.length === 0) return;
     setViewCart(false);
     const meal = {
       id: Date.now(),
@@ -195,7 +197,11 @@ function AddMeal({ onBack, onAddMeal, mealName: initialName = '', foodLibrary })
     setConfirmed(true);
   }
 
-  const cartIds = new Set(cart.map(c => c.id));
+  // Count how many times each food id appears in cart (allows adding same food multiple times)
+  const cartCounts = cart.reduce((acc, item) => {
+    acc[item.id] = (acc[item.id] || 0) + 1;
+    return acc;
+  }, {});
 
   if (confirmed) {
     const totalKcal = cart.reduce((s, i) => s + i.totalKcal, 0);
@@ -259,7 +265,7 @@ function AddMeal({ onBack, onAddMeal, mealName: initialName = '', foodLibrary })
             background: 'var(--bg-card, white)', borderRadius: 14, padding: '11px 12px',
             display: 'flex', alignItems: 'center', gap: 10,
             boxShadow: '0 1px 8px rgba(30,20,8,0.06)', marginBottom: 8,
-            border: cartIds.has(food.id) ? '1.5px solid #F5D040' : '1.5px solid transparent',
+            border: cartCounts[food.id] ? '1.5px solid #F5D040' : '1.5px solid transparent',
           }
         },
           React.createElement('div', { style: { flex: 1 } },
@@ -268,27 +274,27 @@ function AddMeal({ onBack, onAddMeal, mealName: initialName = '', foodLibrary })
               `${food.portion || (food.unit === 'u' ? '1 unidad' : '100g')} · ${food.unit === 'u' ? food.kcal : Math.round((food.kcalPerG || food.kcal / 100) * 100)} kcal`
             )
           ),
-          cartIds.has(food.id)
-            ? React.createElement('div', { style: { width: 30, height: 30, borderRadius: 999, background: '#D8F5DB', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
-                React.createElement('svg', { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none', stroke: '#6BCB77', strokeWidth: 2.5, strokeLinecap: 'round', strokeLinejoin: 'round' },
-                  React.createElement('polyline', { points: '20 6 9 17 4 12' })
-                )
-              )
-            : React.createElement('div', {
-                onClick: () => setSelecting(food),
-                style: { width: 30, height: 30, borderRadius: 999, background: '#F5D040', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 1px 6px rgba(245,208,64,0.35)', flexShrink: 0 }
-              },
-                React.createElement('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: '#1E1408', strokeWidth: 2.5, strokeLinecap: 'round' },
+          React.createElement('div', {
+            onClick: () => setSelecting(food),
+            style: { width: 30, height: 30, borderRadius: 999, background: cartCounts[food.id] ? '#D8F5DB' : '#F5D040', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 1px 6px rgba(245,208,64,0.35)', flexShrink: 0 }
+          },
+            cartCounts[food.id]
+              ? React.createElement('span', { style: { fontSize: 11, fontWeight: 800, color: '#2A7D3A' } }, cartCounts[food.id] > 9 ? '9+' : String(cartCounts[food.id]))
+              : React.createElement('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: '#1E1408', strokeWidth: 2.5, strokeLinecap: 'round' },
                   React.createElement('line', { x1: 12, y1: 5, x2: 12, y2: 19 }),
                   React.createElement('line', { x1: 5, y1: 12, x2: 19, y2: 12 })
                 )
-              )
+          )
         )
       ),
       filtered.length === 0 && React.createElement('div', { style: { textAlign: 'center', padding: '32px 16px', color: 'var(--color-muted, #9A8878)' } },
         React.createElement('div', { style: { fontSize: 32, marginBottom: 8 } }, '🔍'),
-        React.createElement('div', { style: { fontSize: 14, fontWeight: 500 } }, 'No encontramos ese alimento'),
-        React.createElement('div', { style: { fontSize: 12, marginTop: 4 } }, 'Puedes agregarlo en "Alimentos" desde el menú inferior')
+        React.createElement('div', { style: { fontSize: 14, fontWeight: 500, color: 'var(--color-text, #1E1408)' } }, 'No encontramos ese alimento'),
+        React.createElement('div', { style: { fontSize: 12, marginTop: 4 } }, '¿No está en la lista? Agrégalo a tu biblioteca.'),
+        onGoToLibrary && React.createElement('button', {
+          onClick: () => onGoToLibrary(cart),
+          style: { marginTop: 14, background: '#F5D040', border: 'none', borderRadius: 999, padding: '11px 22px', fontFamily: "'DM Sans',sans-serif", fontSize: 14, fontWeight: 600, color: '#1E1408', cursor: 'pointer', boxShadow: '0 2px 8px rgba(245,208,64,0.3)' }
+        }, '+ Ir a Alimentos')
       )
     ),
     selecting && React.createElement('div', {

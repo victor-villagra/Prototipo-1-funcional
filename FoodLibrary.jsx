@@ -90,11 +90,12 @@ function _buildDBFood(entry, idx) {
     id: 'db_' + idx,
     name: entry.n[0].charAt(0).toUpperCase() + entry.n[0].slice(1),
     unit: entry.u,
-    kcal:    isG ? entry.k : entry.k,
-    protein: isG ? entry.p : entry.p,
-    fat:     isG ? entry.f : entry.f,
-    carbs:   isG ? entry.c : entry.c,
-    sugar:   isG ? entry.s : entry.s,
+    // Per-gram foods store the raw per-g value; per-unit foods store the absolute value
+    kcal:    entry.k,
+    protein: entry.p,
+    fat:     entry.f,
+    carbs:   entry.c,
+    sugar:   entry.s,
     kcalPerG: isG ? entry.k : null,
     custom: false,
   };
@@ -145,8 +146,10 @@ function FoodDetailSheet({ food, onClose, onDelete, onEdit }) {
     React.createElement('div', { style: { fontSize: 13, color: 'var(--color-muted, #9A8878)', marginBottom: 16 } }, `Valores por ${perLabel}`),
     React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 } },
       MACRO_FIELDS.map(m => {
-        const val = isGram ? ((food.kcalPerG || food.kcal) * 100 === food.kcal && m.key === 'kcal' ? kcalVal : (food[m.key] || 0) * 100) : food[m.key];
-        const displayVal = m.key === 'kcal' ? (isGram ? kcalVal : food.kcal) : (isGram ? (food[m.key] || 0) * 100 : food[m.key]);
+        // For gram-based foods, stored value is per-1g; display per 100g for readability
+        const displayVal = m.key === 'kcal'
+          ? (isGram ? kcalVal : food.kcal)
+          : (isGram ? parseFloat(((food[m.key] || 0) * 100).toFixed(1)) : food[m.key]);
         return React.createElement('div', { key: m.key, style: { background: m.color + '22', borderRadius: 12, padding: '12px 14px' } },
           React.createElement('div', { style: { fontSize: 11, fontWeight: 600, color: m.color, marginBottom: 2 } }, m.label),
           React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 20, fontWeight: 900, color: 'var(--color-text, #1E1408)' } },
@@ -188,7 +191,6 @@ function AddFoodSheet({ onClose, onSave, editFood }) {
     if (!form.name) return;
     setAiLoading(true);
     setAiError('');
-    await new Promise(r => setTimeout(r, 700));
     const found = findFoodInDB(form.name);
     if (found) {
       setForm(f => ({ ...f, kcal: String(found.k), protein: String(found.p), fat: String(found.f), carbs: String(found.c), sugar: String(found.s), unit: found.u }));
@@ -273,15 +275,16 @@ function AddFoodSheet({ onClose, onSave, editFood }) {
           const fatRaw     = parseFloat(form.fat)     || 0;
           const carbsRaw   = parseFloat(form.carbs)   || 0;
           const sugarRaw   = parseFloat(form.sugar)   || 0;
+          // For unit:'g', values entered are per 1g. For unit:'u', values are per unit.
           const normalized = {
             id: editFood ? editFood.id : Date.now(),
-            name: form.name,
+            name: form.name.trim(),
             unit: form.unit,
-            kcal:    form.unit === 'g' ? kcalRaw : kcalRaw,
-            protein: form.unit === 'g' ? proteinRaw : proteinRaw,
-            fat:     form.unit === 'g' ? fatRaw : fatRaw,
-            carbs:   form.unit === 'g' ? carbsRaw : carbsRaw,
-            sugar:   form.unit === 'g' ? sugarRaw : sugarRaw,
+            kcal:    kcalRaw,
+            protein: proteinRaw,
+            fat:     fatRaw,
+            carbs:   carbsRaw,
+            sugar:   sugarRaw,
             kcalPerG: form.unit === 'g' ? kcalRaw : null,
             custom: true,
           };
@@ -438,4 +441,4 @@ function FoodLibrary({ onBack, library, onUpdateLibrary }) {
   );
 }
 
-Object.assign(window, { FoodLibrary, NUTRITION_DB, DB_FOODS });
+Object.assign(window, { FoodLibrary, NUTRITION_DB, DB_FOODS, findFoodInDB });
