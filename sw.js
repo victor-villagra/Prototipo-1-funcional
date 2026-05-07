@@ -1,5 +1,5 @@
 // KCALIA Service Worker — offline-first cache
-const CACHE = 'kcalia-v1';
+const CACHE = 'kcalia-v2';
 const ASSETS = [
   './',
   './index.html',
