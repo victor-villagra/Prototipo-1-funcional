@@ -86,7 +86,8 @@ function BottomNav({ screen, onNavigate }) {
         onClick: () => onNavigate(tab.id === 'add' ? 'add' : tab.id),
         style: {
           flex: 1, display: 'flex', flexDirection: 'column',
-          alignItems: 'center', gap: 4, cursor: 'pointer', padding: '4px 0',
+          alignItems: 'center', justifyContent: 'flex-end',
+          gap: 4, cursor: 'pointer', padding: '4px 0',
           userSelect: 'none',
         }
       },
@@ -103,7 +104,6 @@ function BottomNav({ screen, onNavigate }) {
           style: {
             fontSize: 11, fontWeight: screen === tab.id ? 600 : 500,
             color: screen === tab.id ? '#F5C030' : '#B8A898',
-            ...(tab.fab ? { marginTop: -4 } : {})
           }
         }, tab.label)
       )

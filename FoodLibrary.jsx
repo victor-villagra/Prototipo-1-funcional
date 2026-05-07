@@ -234,7 +234,7 @@ function FoodDetailSheet({ food, onClose, onDelete, onEdit }) {
       })
     ),
     React.createElement('div', { style: { display: 'flex', gap: 8 } },
-      food.custom && React.createElement('button', {
+      React.createElement('button', {
         onClick: onEdit,
         style: { flex: 1, background: '#FFF3C4', border: 'none', borderRadius: 999, padding: '13px', fontFamily: "'DM Sans',sans-serif", fontSize: 14, fontWeight: 600, color: '#9A6D00', cursor: 'pointer' }
       }, 'Editar'),
@@ -352,7 +352,7 @@ function AddFoodSheet({ onClose, onSave, editFood }) {
           const sugarRaw   = parseFloat(form.sugar)   || 0;
           // For unit:'g', values entered are per 1g. For unit:'u', values are per unit.
           const normalized = {
-            id: editFood ? editFood.id : Date.now(),
+            id: (editFood && editFood.custom) ? editFood.id : Date.now(),
             name: form.name.trim(),
             unit: form.unit,
             kcal:    kcalRaw,
@@ -425,9 +425,12 @@ function FoodLibrary({ onBack, library, onUpdateLibrary }) {
   const filtered = tabFoods.filter(f => f.name.toLowerCase().includes(query.toLowerCase()));
 
   function handleSave(normalized) {
-    if (editFood) {
-      // Update existing custom food
+    if (editFood && editFood.custom) {
+      // Update existing custom food in place
       if (onUpdateLibrary) onUpdateLibrary(customFoods.map(f => f.id === editFood.id ? normalized : f));
+    } else if (editFood && !editFood.custom) {
+      // Editing a BASE food: save as custom (overrides base by name match)
+      if (onUpdateLibrary) onUpdateLibrary([normalized, ...customFoods]);
     } else {
       if (onUpdateLibrary) onUpdateLibrary([normalized, ...customFoods]);
     }
