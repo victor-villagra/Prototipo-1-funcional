@@ -1,6 +1,6 @@
 // AppShell.jsx — Layout shell, status bar, bottom navigation
 
-const _isMobile = () => window.innerWidth <= 500;
+const _isMobile = () => window.innerWidth <= 600;
 
 const ICONS = {
   home: (active) => `<svg width="24" height="24" viewBox="0 0 24 24" fill="${active ? '#F5C030' : 'none'}" stroke="${active ? '#F5C030' : '#B8A898'}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`,
@@ -117,10 +117,15 @@ function AppShell({ screen, onNavigate, children }) {
     className: 'phone-shell',
     style: {
       width: mobile ? '100%' : 390,
-      height: mobile ? '100%' : 844,
+      height: mobile ? '100dvh' : 844,
+      maxHeight: mobile ? '100dvh' : 'none',
       background: 'var(--bg-main, #FEFAF3)',
       display: 'flex', flexDirection: 'column', overflow: 'hidden',
-      position: 'relative',
+      position: mobile ? 'fixed' : 'relative',
+      top: mobile ? 0 : 'auto',
+      left: mobile ? 0 : 'auto',
+      right: mobile ? 0 : 'auto',
+      bottom: mobile ? 0 : 'auto',
       borderRadius: mobile ? 0 : 40,
       boxShadow: mobile ? 'none' : '0 24px 80px rgba(30,20,8,0.18)',
     }
