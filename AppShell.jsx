@@ -103,7 +103,7 @@ function BottomNav({ screen, onNavigate }) {
           style: {
             fontSize: 11, fontWeight: screen === tab.id ? 600 : 500,
             color: screen === tab.id ? '#F5C030' : '#B8A898',
-            ...(tab.fab ? { marginTop: 4 } : {})
+            ...(tab.fab ? { marginTop: -4 } : {})
           }
         }, tab.label)
       )
