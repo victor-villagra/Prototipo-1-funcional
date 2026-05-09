@@ -1,11 +1,14 @@
 // Notifications.jsx — In-app notification center, settings & generation
 
+// `color` is used both as accent (icon background, dot, "Ver →" link) and isn't
+// applied to body text — body uses var(--color-text)/var(--color-sub) which meet
+// AA contrast on the soft pastel backgrounds.
 const NOTIF_STYLES = {
-  reminder:   { icon: '⏰', color: '#7EC8E3', bg: '#DFF3FA', label: 'Recordatorio' },
-  alert:      { icon: '⚠️', color: '#FFAB5E', bg: '#FEF0D0', label: 'Alerta' },
-  report:     { icon: '📊', color: '#C5A3FF', bg: '#EFE4FF', label: 'Reporte' },
-  motivation: { icon: '🎉', color: '#6BCB77', bg: '#D8F5DB', label: 'Motivación' },
-  tip:        { icon: '💡', color: '#F5D040', bg: '#FFF3C4', label: 'Consejo' },
+  reminder:   { icon: '⏰', color: '#3A8FB7', bg: '#DFF3FA', label: 'Recordatorio' },
+  alert:      { icon: '⚠️', color: '#B5651D', bg: '#FEF0D0', label: 'Alerta' },
+  report:     { icon: '📊', color: '#7A52CC', bg: '#EFE4FF', label: 'Reporte' },
+  motivation: { icon: '🎉', color: '#2F8C42', bg: '#D8F5DB', label: 'Motivación' },
+  tip:        { icon: '💡', color: '#A06C00', bg: '#FFF3C4', label: 'Consejo' },
 };
 
 const DEFAULT_NOTIF_PREFS = {
@@ -25,11 +28,13 @@ function generateAppNotifications(todayMeals, dailyGoals, dailyLog, userData, ex
   const todayStr = now.toDateString();
   const hour = now.getHours();
 
-  // Deduplication: meal reminders by hour-window, one-per-day for rest
+  // Deduplication: meal reminders by hour-window, one-per-day for rest.
+  // If a notification has a malformed timestamp, treat it as already shown so
+  // we don't accidentally spam new ones because the comparison returned NaN.
   const has = (subtype, windowHours = 24) => existing.some(n => {
     if (n.subtype !== subtype) return false;
     const ts = new Date(n.timestamp);
-    if (isNaN(ts.getTime())) return false;
+    if (isNaN(ts.getTime())) return true;
     const diffH = (now - ts) / 3600000;
     return diffH < windowHours;
   });
@@ -167,20 +172,21 @@ function NotificationCenter({ notifications, onMarkRead, onMarkAllRead, onClearA
                 cursor: n.action ? 'pointer' : 'default',
                 opacity: n.read ? 0.75 : 1,
                 transition: 'all 0.15s',
+                position: 'relative',
               }
             },
+              !n.read && React.createElement('div', { style: { position: 'absolute', top: 10, right: 10, width: 8, height: 8, borderRadius: 999, background: s.color } }),
               React.createElement('div', { style: { display: 'flex', alignItems: 'flex-start', gap: 10 } },
                 React.createElement('div', { style: { width: 36, height: 36, borderRadius: 12, background: n.read ? 'var(--bg-card2, #F5EFE4)' : s.color + '22', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 } }, s.icon),
                 React.createElement('div', { style: { flex: 1, minWidth: 0 } },
                   React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 } },
-                    React.createElement('div', { style: { fontSize: 14, fontWeight: n.read ? 500 : 700, color: 'var(--color-text, #1E1408)', lineHeight: 1.3 } }, n.title),
+                    React.createElement('div', { style: { fontSize: 14, fontWeight: n.read ? 500 : 700, color: 'var(--color-text, #1E1408)', lineHeight: 1.3, paddingRight: !n.read ? 12 : 0 } }, n.title),
                     React.createElement('span', { style: { fontSize: 10, color: 'var(--color-muted, #9A8878)', flexShrink: 0, marginTop: 2 } }, timeAgo(n.timestamp))
                   ),
                   React.createElement('div', { style: { fontSize: 12, color: 'var(--color-sub, #7A6652)', marginTop: 3, lineHeight: 1.4 } }, n.message),
                   n.action && React.createElement('div', { style: { marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, color: s.color } },
                     'Ver →'
-                  ),
-                  !n.read && React.createElement('div', { style: { position: 'absolute', top: 12, right: 12, width: 8, height: 8, borderRadius: 999, background: s.color } })
+                  )
                 )
               )
             );
@@ -241,10 +247,10 @@ function NotificationSettingsSheet({ prefs, onUpdatePrefs, onClose }) {
       )
     ),
 
-    // Info note
+    // Info note — clarifies that the in-app notification center already works.
     React.createElement('div', { style: { marginTop: 16, padding: '10px 14px', background: '#DFF3FA', borderRadius: 12, fontSize: 12, color: '#3A7A9A', lineHeight: 1.5, display: 'flex', alignItems: 'flex-start', gap: 8 } },
       React.createElement('span', { style: { fontSize: 14, flexShrink: 0 } }, 'ℹ️'),
-      'Las notificaciones push se activarán cuando se integre el servicio de mensajería. Por ahora, las notificaciones se muestran dentro de la app.'
+      'Las notificaciones se muestran dentro de la app, en el centro de notificaciones (icono de campana). Las notificaciones push del sistema se sumarán en una próxima versión.'
     ),
 
     // Buttons

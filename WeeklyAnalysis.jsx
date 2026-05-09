@@ -1,7 +1,8 @@
-// WeeklyAnalysis.jsx — Weekly analysis + next week goal adjustment
-
-const TRAINING_COLORS = { strength: '#7EC8E3', cardio: '#FF8C69', rest: '#D4C8B4', mixed: '#C5A3FF' };
-const TRAINING_LABELS = { strength: 'Fuerza', cardio: 'Cardio', rest: 'Descanso', mixed: 'Mixto' };
+// WeeklyAnalysis.jsx — Weekly analysis + next week goal adjustment.
+// Training labels/colors come from Constants.jsx so they stay in sync with Onboarding.
+// Local fallbacks are kept in case Constants.jsx isn't loaded for some reason.
+const TRAINING_COLORS = (typeof window !== 'undefined' && window.TRAINING_COLORS) || { strength: '#7EC8E3', cardio: '#FF8C69', rest: '#D4C8B4', mixed: '#C5A3FF' };
+const TRAINING_LABELS = (typeof window !== 'undefined' && window.TRAINING_LABELS) || { strength: 'Fuerza', cardio: 'Cardio', rest: 'Descanso', mixed: 'Mixto' };
 
 function WeekChart2({ weekSummary }) {
   const maxKcal = Math.max(...weekSummary.map(d => d.kcal), 2400, 100);
@@ -31,10 +32,11 @@ function WeekChart2({ weekSummary }) {
 }
 
 function InsightCard({ type, text }) {
+  // Text colors meet WCAG AA (>=4.5:1) on their respective backgrounds.
   const styles = {
-    tip:     { bg: '#FFF3C4', border: '#F5D040', color: '#7A5800', icon: '💡' },
-    success: { bg: '#D8F5DB', border: '#6BCB77', color: '#2A7D3A', icon: '✓' },
-    warning: { bg: '#FEF0D0', border: '#F5A623', color: '#8A5C00', icon: '⚠' },
+    tip:     { bg: '#FFF3C4', border: '#F5D040', color: '#5C4200', icon: '💡' },
+    success: { bg: '#D8F5DB', border: '#6BCB77', color: '#1F5F2A', icon: '✓' },
+    warning: { bg: '#FEF0D0', border: '#F5A623', color: '#6A4500', icon: '⚠' },
   };
   const s = styles[type] || styles.tip;
   return React.createElement('div', { style: { background: s.bg, border: `1px solid ${s.border}`, borderRadius: 14, padding: '12px 14px', marginBottom: 8, display: 'flex', gap: 10 } },
@@ -116,22 +118,55 @@ function WeeklyAnalysis({ onBack, dailyLog, dailyGoals, userData, onUpdateGoals 
     setNextWeek(prev => prev.map((g, i) => i === idx ? { ...g, kcal: Math.max(KCAL_MIN, Math.min(KCAL_MAX, val)) } : g));
   }
 
-  // Auto-generate insights
+  // Auto-generate insights based on the actual week data, not generic boilerplate.
   const insights = [];
-  if (daysOnTarget > 0) {
-    insights.push({ type: 'success', text: `Cumpliste tu meta ${daysOnTarget} de ${daysLogged || 7} días registrados. ¡Buen trabajo!` });
-  }
-  if (daysOver > 0) {
-    insights.push({ type: 'warning', text: `Excediste tu meta calórica ${daysOver} día${daysOver > 1 ? 's' : ''}. Considera redistribuir las calorías.` });
-  }
   if (daysLogged === 0) {
     insights.push({ type: 'tip', text: 'Empieza a registrar tus comidas para obtener un análisis personalizado de tu semana.' });
   } else {
+    if (daysOnTarget > 0 && daysOnTarget === daysLogged) {
+      insights.push({ type: 'success', text: `Cumpliste tu meta los ${daysLogged} día${daysLogged > 1 ? 's' : ''} registrados. ¡Excelente consistencia!` });
+    } else if (daysOnTarget > 0) {
+      insights.push({ type: 'success', text: `Cumpliste tu meta ${daysOnTarget} de ${daysLogged} día${daysLogged > 1 ? 's' : ''} registrados. ¡Buen trabajo!` });
+    }
+
+    if (daysOver > 0) {
+      insights.push({ type: 'warning', text: `Excediste tu meta calórica ${daysOver} día${daysOver > 1 ? 's' : ''}. Considera redistribuir las calorías o ajustar las porciones.` });
+    }
+
     if (daysLogged < 7) {
       const sinRegistro = 7 - daysLogged;
-      insights.push({ type: 'tip', text: `${sinRegistro} día${sinRegistro > 1 ? 's' : ''} sin registro esta semana. Recuerda registrar tus comidas para un análisis más preciso.` });
+      insights.push({ type: 'tip', text: `${sinRegistro} día${sinRegistro > 1 ? 's' : ''} sin registro esta semana. Registrar a diario hace que el análisis sea más preciso.` });
     }
-    insights.push({ type: 'tip', text: 'Mantener una ingesta consistente de proteína es clave para preservar la masa muscular.' });
+
+    // Compute protein average from actual logged meals to give a real insight.
+    const weekStart = new Date(today); weekStart.setDate(today.getDate() - 6); weekStart.setHours(0, 0, 0, 0);
+    const weekMeals = (dailyLog || []).filter(m => {
+      try { return new Date(m.date) >= weekStart; } catch { return false; }
+    });
+    const totalProtein = weekMeals.reduce((s, m) => s + (m.totalProtein || 0), 0);
+    const avgProtein   = daysLogged > 0 ? Math.round(totalProtein / daysLogged) : 0;
+    const protGoal     = (dailyGoals && dailyGoals.protein) || 80;
+
+    if (avgProtein > 0 && avgProtein < protGoal * 0.7) {
+      insights.push({ type: 'warning', text: `Tu promedio de proteína (${avgProtein}g) está por debajo de tu meta (${protGoal}g). Suma fuentes como pollo, huevo, lácteos o legumbres.` });
+    } else if (avgProtein >= protGoal) {
+      insights.push({ type: 'success', text: `Promedio de proteína: ${avgProtein}g/día. Estás cumpliendo tu meta — clave para preservar masa muscular.` });
+    }
+
+    // Variability insight: if some days are very high and others very low,
+    // suggest spreading calories more evenly.
+    const loggedKcals = weekSummary.filter(d => d.logged).map(d => d.kcal);
+    if (loggedKcals.length >= 3) {
+      const mn = Math.min(...loggedKcals);
+      const mx = Math.max(...loggedKcals);
+      if (mx - mn > goalKcal * 0.5) {
+        insights.push({ type: 'tip', text: `Variación de ${mx - mn} kcal entre tu día más alto y más bajo. Comer de forma más uniforme ayuda al metabolismo.` });
+      }
+    }
+
+    if (insights.length === 0) {
+      insights.push({ type: 'tip', text: 'Buen ritmo esta semana. Sigue registrando para detectar patrones y oportunidades de mejora.' });
+    }
   }
 
   const [confirmed, setConfirmed] = React.useState(false);
@@ -164,7 +199,7 @@ function WeeklyAnalysis({ onBack, dailyLog, dailyGoals, userData, onUpdateGoals 
         [
           { label: 'Total semana', val: totalKcal > 0 ? totalKcal.toLocaleString() : '—', unit: 'kcal', color: '#F5D040' },
           { label: 'Promedio/día', val: avgKcal > 0 ? avgKcal.toLocaleString() : '—', unit: 'kcal', color: '#FFAB5E' },
-          { label: 'Días en meta', val: `${daysOnTarget}/${daysLogged || 7}`, unit: '', color: '#6BCB77' },
+          { label: 'Días en meta', val: daysLogged > 0 ? `${daysOnTarget}/${daysLogged}` : '—', unit: '', color: '#6BCB77' },
         ].map(s =>
           React.createElement('div', { key: s.label, style: { flex: 1, background: 'var(--bg-card, white)', borderRadius: 14, padding: '12px 10px', textAlign: 'center', boxShadow: '0 2px 8px rgba(30,20,8,0.07)' } },
             React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 20, fontWeight: 900, color: s.color } }, s.val),

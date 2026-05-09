@@ -178,7 +178,7 @@ function _buildDBFood(entry, idx) {
 
 const DB_FOODS = NUTRITION_DB.map(_buildDBFood);
 
-function _norm(s) { return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+function _norm(s) { return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
 
 function findFoodInDB(name) {
   const q = _norm(name);
@@ -247,14 +247,17 @@ function FoodDetailSheet({ food, onClose, onDelete, onEdit }) {
 }
 
 function AddFoodSheet({ onClose, onSave, editFood }) {
+  // Coerce unknown/undefined macro values to '' instead of the string "undefined",
+  // which would later parseFloat to NaN and corrupt every meal using this food.
+  const _str = (v) => (v === null || v === undefined || isNaN(v)) ? '' : String(v);
   const [form, setForm] = React.useState(editFood ? {
-    name: editFood.name,
-    unit: editFood.unit,
-    kcal:    String(editFood.unit === 'g' ? (editFood.kcalPerG || editFood.kcal) : editFood.kcal),
-    protein: String(editFood.protein),
-    fat:     String(editFood.fat),
-    carbs:   String(editFood.carbs),
-    sugar:   String(editFood.sugar),
+    name: editFood.name || '',
+    unit: editFood.unit || 'g',
+    kcal:    _str(editFood.unit === 'g' ? (editFood.kcalPerG != null ? editFood.kcalPerG : editFood.kcal) : editFood.kcal),
+    protein: _str(editFood.protein),
+    fat:     _str(editFood.fat),
+    carbs:   _str(editFood.carbs),
+    sugar:   _str(editFood.sugar),
   } : { name: '', unit: 'g', kcal: '', protein: '', fat: '', carbs: '', sugar: '' });
   const [aiLoading, setAiLoading] = React.useState(false);
   const [aiDone, setAiDone]   = React.useState(false);
@@ -276,7 +279,19 @@ function AddFoodSheet({ onClose, onSave, editFood }) {
     setAiLoading(false);
   }
 
-  const canSave = form.name && form.kcal && form.protein;
+  // Require name + non-negative numbers across all macro fields. kcal must be > 0
+  // since a 0-calorie food has no nutritional impact and is almost certainly a typo.
+  const numFields = ['kcal', 'protein', 'fat', 'carbs', 'sugar'];
+  const numericValues = numFields.map(k => parseFloat(form[k]));
+  const hasInvalidNumbers = numericValues.some(v => v !== undefined && form[numFields[numericValues.indexOf(v)]] !== '' && (isNaN(v) || v < 0));
+  const allNumbersValid = numFields.every(k => {
+    const v = form[k];
+    if (v === '') return false;
+    const n = parseFloat(v);
+    return !isNaN(n) && n >= 0;
+  });
+  const kcalNum = parseFloat(form.kcal);
+  const canSave = !!form.name.trim() && allNumbersValid && !isNaN(kcalNum) && kcalNum > 0;
 
   return React.createElement('div', {
     style: {
@@ -331,7 +346,14 @@ function AddFoodSheet({ onClose, onSave, editFood }) {
             React.createElement('div', { style: { position: 'relative' } },
               React.createElement('input', {
                 type: 'number', placeholder: '0', value: form[m.key],
-                onChange: e => update(m.key, e.target.value),
+                min: 0,
+                onChange: e => {
+                  const raw = e.target.value;
+                  if (raw === '') { update(m.key, ''); return; }
+                  const v = parseFloat(raw);
+                  if (isNaN(v) || v < 0) return;
+                  update(m.key, raw);
+                },
                 style: { width: '100%', padding: '10px 32px 10px 10px', borderRadius: 10, border: `1.5px solid ${form[m.key] ? m.color + '88' : 'var(--border-color, #EAE0D0)'}`, background: 'var(--bg-input, white)', fontFamily: "'Nunito',sans-serif", fontSize: 14, fontWeight: 700, color: 'var(--color-text, #1E1408)', outline: 'none' }
               }),
               React.createElement('span', { style: { position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: 'var(--color-muted, #9A8878)' } }, m.suffix)
@@ -425,14 +447,23 @@ function FoodLibrary({ onBack, library, onUpdateLibrary }) {
   const filtered = tabFoods.filter(f => f.name.toLowerCase().includes(query.toLowerCase()));
 
   function handleSave(normalized) {
+    if (!onUpdateLibrary) { setShowAdd(false); setEditFood(null); return; }
+
     if (editFood && editFood.custom) {
-      // Update existing custom food in place
-      if (onUpdateLibrary) onUpdateLibrary(customFoods.map(f => f.id === editFood.id ? normalized : f));
-    } else if (editFood && !editFood.custom) {
-      // Editing a BASE food: save as custom (overrides base by name match)
-      if (onUpdateLibrary) onUpdateLibrary([normalized, ...customFoods]);
+      // Update existing custom food in place by id.
+      onUpdateLibrary(customFoods.map(f => f.id === editFood.id ? normalized : f));
     } else {
-      if (onUpdateLibrary) onUpdateLibrary([normalized, ...customFoods]);
+      // New food OR editing a BASE food. In both cases, if a custom with the
+      // same (case-insensitive) name already exists, replace it instead of
+      // creating a duplicate. This avoids "Pollo MÍO" + "Pollo BASE" pairs.
+      const targetName = normalized.name.trim().toLowerCase();
+      const existingIdx = customFoods.findIndex(f => f.name.trim().toLowerCase() === targetName);
+      if (existingIdx >= 0) {
+        const replacement = { ...normalized, id: customFoods[existingIdx].id };
+        onUpdateLibrary(customFoods.map((f, i) => i === existingIdx ? replacement : f));
+      } else {
+        onUpdateLibrary([normalized, ...customFoods]);
+      }
     }
     setShowAdd(false);
     setEditFood(null);

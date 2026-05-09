@@ -22,14 +22,6 @@ const LIFESTYLES = [
   { id: 'walking',   label: 'Caminando todo el día', desc: 'Trabajo físico activo' },
 ];
 
-const OCCUPATIONS = [
-  { id: 'student',   label: 'Estudiante' },
-  { id: 'office',    label: 'Trabajo de oficina' },
-  { id: 'physical',  label: 'Trabajo físico' },
-  { id: 'freelance', label: 'Freelance / independiente' },
-  { id: 'other',     label: 'Otro' },
-];
-
 const DAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 const TRAINING_TYPES = [
   { id: 'strength', label: 'Fuerza',   color: '#7EC8E3', bg: '#DFF3FA' },
@@ -194,19 +186,8 @@ function PersonalStep({ data, setData, onNext, onBack }) {
           )
         )
       ),
-      React.createElement('div', { style: { marginBottom: 14 } },
-        React.createElement('div', { style: { fontSize: 13, fontWeight: 600, color: '#5A4838', marginBottom: 6 } }, 'Ocupación'),
-        React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 8 } },
-          OCCUPATIONS.map(o =>
-            React.createElement('div', {
-              key: o.id, onClick: () => setData({ ...data, occupation: o.id }),
-              style: { padding: '8px 14px', borderRadius: 999, border: `1.5px solid ${data.occupation === o.id ? '#F5D040' : '#EAE0D0'}`, background: data.occupation === o.id ? '#FFF3C4' : 'white', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: data.occupation === o.id ? '#9A6D00' : '#5A4838' }
-            }, o.label)
-          )
-        )
-      )
     ),
-    React.createElement(NextBtn, { onClick: onNext, disabled: !data.name || !data.age || !data.sex })
+    React.createElement(NextBtn, { onClick: onNext, disabled: !data.name || !data.age || data.age < 10 || !data.sex })
   );
 }
 
@@ -239,7 +220,7 @@ function BodyStep({ data, setData, onNext, onBack }) {
         )
       )
     ),
-    React.createElement(NextBtn, { onClick: onNext, disabled: !data.weight || !data.height })
+    React.createElement(NextBtn, { onClick: onNext, disabled: !data.weight || data.weight < 20 || !data.height || data.height < 50 || (data.age && data.age < 10) })
   );
 }
 
@@ -388,7 +369,7 @@ function PersonalGoalStep({ data, setData, onNext, onBack }) {
       ),
 
       // Optional note
-      React.createElement('div', { style: { marginTop: 20, padding: '10px 14px', background: '#FFF3C4', borderRadius: 12, fontSize: 12, color: '#7A5800', lineHeight: 1.5, display: 'flex', alignItems: 'flex-start', gap: 8 } },
+      React.createElement('div', { style: { marginTop: 20, padding: '10px 14px', background: '#FFF3C4', borderRadius: 12, fontSize: 12, color: '#5C4200', lineHeight: 1.5, display: 'flex', alignItems: 'flex-start', gap: 8 } },
         React.createElement('span', { style: { fontSize: 14, flexShrink: 0 } }, '💡'),
         'Este paso es totalmente opcional. Si prefieres, puedes omitirlo y completarlo después desde tu perfil.'
       )
@@ -427,24 +408,12 @@ function PersonalGoalStep({ data, setData, onNext, onBack }) {
 }
 
 function SummaryStep({ data, onFinish, onBack }) {
-  const w = parseFloat(data.weight) || 70;
-  const h = parseFloat(data.height) || 170;
-  const a = parseFloat(data.age) || 25;
-  const isMale = data.sex !== 'Femenino';
-  const bmr = isMale ? 88.36 + 13.4 * w + 4.8 * h - 5.7 * a : 447.6 + 9.25 * w + 3.1 * h - 4.33 * a;
-  const activityMultipliers = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, very_active: 1.9 };
-  const tdee = Math.round(bmr * (activityMultipliers[data.activity] || 1.55));
-  const goalAdjustment = { lose_fat: -400, gain_muscle: 300, maintain: 0, performance: 200 };
-  const targetKcal = tdee + (goalAdjustment[data.goal] || 0);
-  const GOAL_LABELS = { lose_fat: 'Perder grasa', gain_muscle: 'Ganar músculo', maintain: 'Mantener peso', performance: 'Mejorar rendimiento' };
-
-  const suggestedGoals = {
-    kcal:    targetKcal,
-    protein: Math.round(w * (data.goal === 'gain_muscle' ? 2.0 : 1.6)),
-    fat:     Math.round(targetKcal * 0.25 / 9),
-    carbs:   Math.round((targetKcal - Math.round(w * (data.goal === 'gain_muscle' ? 2.0 : 1.6)) * 4 - Math.round(targetKcal * 0.25 / 9) * 9) / 4),
-    sugar:   50,
-  };
+  // Personalized calc lives in Constants.jsx so the same formula is used elsewhere
+  // and the deficit/surplus scales with the user's TDEE rather than being a flat number.
+  const { bmr, tdee, targetKcal, suggestedGoals } = computeNutritionTargets({
+    weight: data.weight, height: data.height, age: data.age,
+    sex: data.sex, activity: data.activity, goal: data.goal,
+  });
 
   return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', height: '100%' } },
     React.createElement(StepHeader, { step: 6, total: 7, title: `¡Listo, ${data.name || 'campeón'}! 🎉`, sub: 'Tu plan nutricional está listo.', onBack }),
@@ -456,12 +425,12 @@ function SummaryStep({ data, onFinish, onBack }) {
       ),
       React.createElement('div', { style: { background: 'white', borderRadius: 16, padding: '14px 16px', boxShadow: '0 2px 8px rgba(30,20,8,0.06)', marginBottom: 10 } },
         [
-          ['Objetivo', GOAL_LABELS[data.goal] || '—'],
+          ['Objetivo', (typeof GOAL_LABELS !== 'undefined' && GOAL_LABELS[data.goal]) || '—'],
           ['Peso actual', `${data.weight} kg`],
           ['Peso objetivo', data.targetWeight ? `${data.targetWeight} kg` : '—'],
           ['Altura', `${data.height} cm`],
           ['Proteína sugerida', `${suggestedGoals.protein}g / día`],
-          ['Actividad', data.activity],
+          ['Actividad', (typeof ACTIVITY_LABELS !== 'undefined' && ACTIVITY_LABELS[data.activity]) || data.activity || '—'],
         ].map(([k, v]) =>
           React.createElement('div', { key: k, style: { display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #F5EFE4' } },
             React.createElement('span', { style: { fontSize: 13, color: '#7A6652' } }, k),
@@ -469,7 +438,7 @@ function SummaryStep({ data, onFinish, onBack }) {
           )
         )
       ),
-      React.createElement('div', { style: { background: '#FFF3C4', borderRadius: 14, padding: '12px 14px', fontSize: 12, color: '#7A5800', lineHeight: 1.5 } }, '💡 Puedes ajustar estas metas manualmente desde tu perfil en cualquier momento.')
+      React.createElement('div', { style: { background: '#FFF3C4', borderRadius: 14, padding: '12px 14px', fontSize: 12, color: '#5C4200', lineHeight: 1.5 } }, '💡 Puedes ajustar estas metas manualmente desde tu perfil en cualquier momento.')
     ),
     React.createElement(NextBtn, { label: 'Empezar a registrar →', onClick: () => onFinish(data, suggestedGoals) })
   );

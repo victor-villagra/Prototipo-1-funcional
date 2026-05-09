@@ -35,14 +35,28 @@ function WeekChart({ weekData, goalKcal }) {
           const barH = Math.max(Math.round((d.kcal / maxKcal) * chartH), d.kcal > 0 ? 4 : 0);
           const isToday = i === weekData.length - 1;
           const over = d.kcal > goal;
-          const barColor = !d.logged ? 'var(--bg-card2, #F5EFE4)' : over ? '#FF8C69' : isToday ? '#F5D040' : '#FFE682';
+          // Today gets a distinct primary color even when empty so the user can always
+          // locate it; missing days use a subtle dashed placeholder bar.
+          const barColor = isToday
+            ? (d.logged ? (over ? '#FF8C69' : '#F5D040') : '#FFF3C4')
+            : (!d.logged ? 'var(--bg-card2, #F5EFE4)' : over ? '#FF8C69' : '#FFE682');
+          const minBarH = isToday && !d.logged ? 6 : (d.logged ? 4 : 0);
           return React.createElement('div', { key: d.day, style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 } },
             React.createElement('div', { style: { width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: chartH } },
-              React.createElement('div', { style: { width: '100%', background: barColor, borderRadius: '6px 6px 4px 4px', height: barH, position: 'relative', minHeight: d.logged ? 4 : 0 } },
-                isToday && d.kcal > 0 && React.createElement('div', { style: { position: 'absolute', top: -6, left: '50%', transform: 'translateX(-50%)', width: 6, height: 6, background: '#F5D040', borderRadius: 999 } })
+              React.createElement('div', {
+                style: {
+                  width: '100%', background: barColor,
+                  borderRadius: '6px 6px 4px 4px',
+                  height: Math.max(barH, minBarH),
+                  position: 'relative',
+                  border: isToday && !d.logged ? '1.5px dashed #F5C030' : 'none',
+                  boxSizing: 'border-box',
+                }
+              },
+                isToday && React.createElement('div', { style: { position: 'absolute', top: -7, left: '50%', transform: 'translateX(-50%)', width: 8, height: 8, background: '#F5C030', borderRadius: 999, boxShadow: '0 0 0 2px var(--bg-card, white)' } })
               )
             ),
-            React.createElement('div', { style: { fontSize: 11, fontWeight: isToday ? 700 : 500, color: isToday ? '#F5C030' : 'var(--color-muted, #9A8878)' } }, d.day)
+            React.createElement('div', { style: { fontSize: 11, fontWeight: isToday ? 800 : 500, color: isToday ? '#F5C030' : 'var(--color-muted, #9A8878)' } }, isToday ? 'Hoy' : d.day)
           );
         })
       ),
@@ -145,14 +159,14 @@ function Progress({ dailyLog, dailyGoals }) {
     React.createElement('div', { style: { padding: '0 16px', display: 'flex', gap: 10, marginBottom: 14 } },
       React.createElement('div', { style: { flex: 1, background: 'var(--bg-card, white)', borderRadius: 16, padding: 14, boxShadow: '0 2px 12px rgba(30,20,8,0.07)', textAlign: 'center' } },
         React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 26, fontWeight: 900, color: '#F5D040' } }, avg > 0 ? avg.toLocaleString() : '—'),
-        React.createElement('div', { style: { fontSize: 11, color: 'var(--color-sub, #7A6652)', marginTop: 2, fontWeight: 500 } }, 'kcal promedio')
+        React.createElement('div', { style: { fontSize: 11, color: 'var(--color-sub, #7A6652)', marginTop: 2, fontWeight: 500 } }, daysLogged === 0 ? 'sin datos' : daysLogged < 7 ? `kcal · ${daysLogged} día${daysLogged > 1 ? 's' : ''}` : 'kcal promedio')
       ),
       React.createElement('div', { style: { flex: 1, background: 'var(--bg-card, white)', borderRadius: 16, padding: 14, boxShadow: '0 2px 12px rgba(30,20,8,0.07)', textAlign: 'center' } },
-        React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 26, fontWeight: 900, color: '#6BCB77' } }, `${daysOnTarget}/${daysLogged || 7}`),
+        React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 26, fontWeight: 900, color: '#6BCB77' } }, daysLogged > 0 ? `${daysOnTarget}/${daysLogged}` : '—'),
         React.createElement('div', { style: { fontSize: 11, color: 'var(--color-sub, #7A6652)', marginTop: 2, fontWeight: 500 } }, 'días en meta')
       ),
       React.createElement('div', { style: { flex: 1, background: 'var(--bg-card, white)', borderRadius: 16, padding: 14, boxShadow: '0 2px 12px rgba(30,20,8,0.07)', textAlign: 'center' } },
-        React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 26, fontWeight: 900, color: '#FFAB5E' } }, daysLogged),
+        React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 26, fontWeight: 900, color: '#FFAB5E' } }, daysLogged > 0 ? daysLogged : '—'),
         React.createElement('div', { style: { fontSize: 11, color: 'var(--color-sub, #7A6652)', marginTop: 2, fontWeight: 500 } }, 'días registrados')
       )
     ),

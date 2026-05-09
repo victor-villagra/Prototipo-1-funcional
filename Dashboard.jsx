@@ -84,9 +84,12 @@ function MealCard({ meal, idx, onTap }) {
         React.createElement('line', { x1: 12, y1: 2, x2: 12, y2: 7 })
       )
     ),
-    React.createElement('div', { style: { flex: 1 } },
-      React.createElement('div', { style: { fontSize: 15, fontWeight: 600, color: 'var(--color-text, #1E1408)' } }, meal.name),
-      React.createElement('div', { style: { fontSize: 12, color: 'var(--color-muted, #9A8878)', marginTop: 2 } },
+    React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+      React.createElement('div', { style: { display: 'flex', alignItems: 'baseline', gap: 6 } },
+        React.createElement('div', { style: { fontSize: 15, fontWeight: 600, color: 'var(--color-text, #1E1408)' } }, meal.name),
+        meal.time && React.createElement('div', { style: { fontSize: 11, color: 'var(--color-muted, #9A8878)', fontWeight: 500 } }, meal.time)
+      ),
+      React.createElement('div', { style: { fontSize: 12, color: 'var(--color-muted, #9A8878)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
         items.length > 0 ? items.slice(0, 2).join(' · ') + (items.length > 2 ? ` +${items.length - 2}` : '') : 'Sin alimentos'
       ),
     ),
@@ -97,7 +100,7 @@ function MealCard({ meal, idx, onTap }) {
   );
 }
 
-function MealDetailSheet({ meal, onClose, onDelete }) {
+function MealDetailSheet({ meal, onClose, onDelete, onEdit }) {
   const foods = meal.foods || [];
   const MACRO_COLORS = { protein: '#7EC8E3', fat: '#C5A3FF', carbs: '#FF8C69', sugar: '#FFB3C6' };
 
@@ -145,14 +148,20 @@ function MealDetailSheet({ meal, onClose, onDelete }) {
         )
       )
     ),
-    React.createElement('button', {
-      onClick: onDelete,
-      style: { width: '100%', background: '#FFE0E0', border: 'none', borderRadius: 999, padding: '13px', fontFamily: "'DM Sans',sans-serif", fontSize: 14, fontWeight: 600, color: '#C03030', cursor: 'pointer' }
-    }, 'Eliminar comida')
+    React.createElement('div', { style: { display: 'flex', gap: 8 } },
+      onEdit && React.createElement('button', {
+        onClick: onEdit,
+        style: { flex: 2, background: '#F5D040', border: 'none', borderRadius: 999, padding: '13px', fontFamily: "'DM Sans',sans-serif", fontSize: 14, fontWeight: 600, color: '#1E1408', cursor: 'pointer', boxShadow: '0 2px 8px rgba(245,208,64,0.3)' }
+      }, 'Editar comida'),
+      React.createElement('button', {
+        onClick: onDelete,
+        style: { flex: 1, background: '#FFE0E0', border: 'none', borderRadius: 999, padding: '13px', fontFamily: "'DM Sans',sans-serif", fontSize: 14, fontWeight: 600, color: '#C03030', cursor: 'pointer' }
+      }, 'Eliminar')
+    )
   );
 }
 
-function Dashboard({ onNavigate, userData, todayMeals, dailyGoals, unreadCount, onDeleteMeal }) {
+function Dashboard({ onNavigate, userData, todayMeals, dailyGoals, unreadCount, onDeleteMeal, onEditMeal }) {
   const goals = dailyGoals || { kcal: 2000, protein: 80, fat: 70, carbs: 300, sugar: 50 };
   const [selectedMeal, setSelectedMeal] = React.useState(null);
 
@@ -247,7 +256,12 @@ function Dashboard({ onNavigate, userData, todayMeals, dailyGoals, unreadCount, 
       onDelete: () => {
         if (onDeleteMeal) onDeleteMeal(selectedMeal.id);
         setSelectedMeal(null);
-      }
+      },
+      onEdit: onEditMeal ? () => {
+        const m = selectedMeal;
+        setSelectedMeal(null);
+        onEditMeal(m);
+      } : null,
     })
   );
 }

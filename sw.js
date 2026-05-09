@@ -1,8 +1,10 @@
-// KCALIA Service Worker — offline-first cache
-const CACHE = 'kcalia-v2';
+// KCALIA Service Worker — offline-first cache.
+// Bump CACHE whenever JSX/HTML assets change so users pick up new code on next load.
+const CACHE = 'kcalia-v3';
 const ASSETS = [
   './',
   './index.html',
+  './Constants.jsx',
   './AppShell.jsx',
   './Dashboard.jsx',
   './AddMeal.jsx',
@@ -34,16 +36,35 @@ self.addEventListener('activate', e => {
   );
 });
 
+// For JSX/HTML same-origin assets we use a network-first strategy so that
+// users get fresh code while still falling back to cache when offline.
+// Static CDN resources (fonts/React) keep cache-first since they're versioned by URL.
 self.addEventListener('fetch', e => {
-  // Only handle GET requests
   if (e.request.method !== 'GET') return;
+  const url = new URL(e.request.url);
+  const isAppCode = url.origin === self.location.origin
+    && (url.pathname.endsWith('.html') || url.pathname.endsWith('.jsx') || url.pathname.endsWith('/'));
+
+  if (isAppCode) {
+    e.respondWith(
+      fetch(e.request)
+        .then(res => {
+          if (res && res.status === 200) {
+            const clone = res.clone();
+            caches.open(CACHE).then(c => c.put(e.request, clone));
+          }
+          return res;
+        })
+        .catch(() => caches.match(e.request).then(c => c || caches.match('./index.html')))
+    );
+    return;
+  }
+
   e.respondWith(
     caches.match(e.request).then(cached => {
       if (cached) return cached;
       return fetch(e.request).then(res => {
-        // Cache successful responses from same origin and CDN
         if (res && res.status === 200) {
-          const url = new URL(e.request.url);
           const isCacheable = url.origin === self.location.origin
             || url.hostname === 'unpkg.com'
             || url.hostname === 'fonts.googleapis.com'
