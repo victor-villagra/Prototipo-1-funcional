@@ -1,16 +1,56 @@
 // Dashboard.jsx — Home screen with calorie ring, macro bars, meal log
 
-// Meal card icon backgrounds. Use CSS vars so dark mode darkens the pastel
-// background while keeping the same accent hue on the icon. Hardcoded fallbacks
-// match the light-mode palette in case Constants.jsx loaded before the theme
-// vars were defined.
-const MEAL_COLORS = [
-  { color: 'var(--accent-gold-soft, #FFF3C4)',    iconColor: 'var(--accent-gold, #F5C030)' },
-  { color: 'var(--accent-carbs-soft, #FFE5CC)',   iconColor: 'var(--accent-carbs, #FFAB5E)' },
-  { color: 'var(--accent-sugar-soft, #FFE8EF)',   iconColor: 'var(--accent-sugar, #FFB3C6)' },
-  { color: 'var(--accent-protein-soft, #DFF3FA)', iconColor: 'var(--accent-protein, #7EC8E3)' },
-  { color: 'var(--accent-fat-soft, #EFE4FF)',     iconColor: 'var(--accent-fat, #C5A3FF)' },
+// Meal style by name: each meal type gets a distinct emoji + color pair so
+// the daily log is scannable at a glance. Matching is accent-insensitive and
+// uses substring includes so "Almuerzo de oficina" still maps to lunch.
+// First match wins, so put more specific keys (post-entreno) before generic
+// ones (entreno).
+const MEAL_TYPE_STYLES = [
+  { keys: ['desayuno', 'breakfast'],
+    icon: '🍳', color: 'var(--accent-gold-soft, #FFF3C4)',    iconColor: 'var(--accent-gold, #F5C030)' },
+  { keys: ['media manana', 'media-manana', 'brunch'],
+    icon: '🥐', color: 'var(--accent-carbs-soft, #FFE5CC)',   iconColor: 'var(--accent-carbs, #FFAB5E)' },
+  { keys: ['post entreno', 'post-entreno', 'postentreno', 'pre entreno', 'pre-entreno', 'preentreno', 'entreno', 'workout'],
+    icon: '💪', color: 'var(--accent-success-soft, #D8F5DB)', iconColor: 'var(--accent-success, #6BCB77)' },
+  { keys: ['snack', 'colacion', 'picoteo', 'tentempie'],
+    icon: '🍎', color: 'var(--accent-sugar-soft, #FFE8EF)',   iconColor: 'var(--accent-sugar, #FFB3C6)' },
+  { keys: ['almuerzo', 'comida', 'lunch'],
+    icon: '🍽️', color: 'var(--accent-carbs-soft, #FFE4DB)',   iconColor: 'var(--accent-carbs, #FF8C69)' },
+  { keys: ['merienda', 'te', 'tea'],
+    icon: '🍵', color: 'var(--accent-fat-soft, #EFE4FF)',     iconColor: 'var(--accent-fat, #C5A3FF)' },
+  { keys: ['cena', 'dinner'],
+    icon: '🌙', color: 'var(--accent-protein-soft, #DFF3FA)', iconColor: 'var(--accent-protein, #7EC8E3)' },
 ];
+
+const MEAL_FALLBACK_STYLE = {
+  icon: '🍴',
+  color: 'var(--bg-card2, #F5EFE4)',
+  iconColor: 'var(--color-sub, #7A6652)',
+};
+
+function getMealStyle(name) {
+  const norm = (typeof normalizeText === 'function')
+    ? normalizeText(name)
+    : (name || '').toLowerCase();
+  if (!norm) return MEAL_FALLBACK_STYLE;
+  // Tokenize so very short keys ("te", "tea") match only as whole words and
+  // don't bleed into longer ones like "comete" or "tentempie".
+  const tokens = norm.split(/\s+/).filter(Boolean);
+  for (const style of MEAL_TYPE_STYLES) {
+    for (const key of style.keys) {
+      const trimmed = key.trim();
+      // Multi-word keys ("media manana", "post entreno") fall through to includes
+      // since tokenization would split them.
+      const isMultiword = trimmed.includes(' ') || trimmed.includes('-');
+      if (isMultiword) {
+        if (norm.includes(trimmed) || norm.replace(/-/g, ' ').includes(trimmed.replace(/-/g, ' '))) return style;
+      } else if (tokens.includes(trimmed)) {
+        return style;
+      }
+    }
+  }
+  return MEAL_FALLBACK_STYLE;
+}
 
 function CalorieRing({ consumed, goal }) {
   const safeGoal = (goal && goal > 0) ? goal : 2000;
@@ -65,7 +105,7 @@ function MacroBar({ label, val, goal, color, unit }) {
 }
 
 function MealCard({ meal, idx, onTap }) {
-  const c = MEAL_COLORS[idx % MEAL_COLORS.length];
+  const c = getMealStyle(meal.name);
   const items = meal.foods ? meal.foods.map(f => f.name) : (meal.items || []);
   const accessibleLabel = `${meal.name}, ${Math.round(meal.totalKcal || meal.kcal || 0)} kcal${meal.time ? ', ' + meal.time : ''}`;
   return React.createElement('button', {
@@ -88,13 +128,9 @@ function MealCard({ meal, idx, onTap }) {
     onMouseLeave: e => e.currentTarget.style.transform = 'scale(1)',
   },
     React.createElement('div', {
-      style: { width: 46, height: 46, borderRadius: 13, background: c.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }
-    },
-      React.createElement('svg', { width: 22, height: 22, viewBox: '0 0 24 24', fill: 'none', stroke: c.iconColor, strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round' },
-        React.createElement('path', { d: 'M3 2l1.578 10.5A2 2 0 0 0 6.561 14H9v7a1 1 0 0 0 2 0v-7h2v7a1 1 0 0 0 2 0v-7h2.439a2 2 0 0 0 1.983-1.5L21 2' }),
-        React.createElement('line', { x1: 12, y1: 2, x2: 12, y2: 7 })
-      )
-    ),
+      style: { width: 46, height: 46, borderRadius: 13, background: c.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 24, lineHeight: 1 },
+      'aria-hidden': 'true'
+    }, c.icon),
     React.createElement('div', { style: { flex: 1, minWidth: 0 } },
       React.createElement('div', { style: { display: 'flex', alignItems: 'baseline', gap: 6 } },
         React.createElement('div', { style: { fontSize: 15, fontWeight: 600, color: 'var(--color-text, #1E1408)' } }, meal.name),
@@ -114,6 +150,7 @@ function MealCard({ meal, idx, onTap }) {
 function MealDetailSheet({ meal, onClose, onDelete, onEdit }) {
   const foods = meal.foods || [];
   const MACRO_COLORS = { protein: '#7EC8E3', fat: '#C5A3FF', carbs: '#FF8C69', sugar: '#FFB3C6' };
+  const mealStyle = getMealStyle(meal.name);
 
   return React.createElement('div', {
     style: {
@@ -124,10 +161,16 @@ function MealDetailSheet({ meal, onClose, onDelete, onEdit }) {
     }
   },
     React.createElement('div', { style: { width: 36, height: 4, background: '#D4C8B4', borderRadius: 999, margin: '12px auto 0' } }),
-    React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0 10px' } },
-      React.createElement('div', null,
-        React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 18, fontWeight: 800, color: 'var(--color-text, #1E1408)' } }, meal.name),
-        meal.time && React.createElement('div', { style: { fontSize: 12, color: 'var(--color-muted, #9A8878)', marginTop: 2 } }, meal.time)
+    React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0 10px', gap: 12 } },
+      React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 } },
+        React.createElement('div', {
+          style: { width: 44, height: 44, borderRadius: 13, background: mealStyle.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 24, lineHeight: 1 },
+          'aria-hidden': 'true'
+        }, mealStyle.icon),
+        React.createElement('div', { style: { minWidth: 0 } },
+          React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 18, fontWeight: 800, color: 'var(--color-text, #1E1408)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, meal.name),
+          meal.time && React.createElement('div', { style: { fontSize: 12, color: 'var(--color-muted, #9A8878)', marginTop: 2 } }, meal.time)
+        )
       ),
       React.createElement('button', {
         onClick: onClose,
