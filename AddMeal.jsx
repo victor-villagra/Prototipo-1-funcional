@@ -90,9 +90,11 @@ function CartBar({ items, onConfirm, onView }) {
       display: 'flex', alignItems: 'center', gap: 12,
     }
   },
-    React.createElement('div', {
+    React.createElement('button', {
       onClick: onView,
-      style: { width: 40, height: 40, background: '#F5D040', borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, position: 'relative' }
+      'aria-label': `Ver carrito, ${items.length} alimento${items.length !== 1 ? 's' : ''}`,
+      type: 'button',
+      style: { width: 44, height: 44, background: '#F5D040', borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, position: 'relative', border: 'none', padding: 0 }
     },
       React.createElement('svg', { width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none', stroke: '#1E1408', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' },
         React.createElement('circle', { cx: 9, cy: 21, r: 1 }),
@@ -134,7 +136,12 @@ function CartSheet({ items, onRemove, onClose, onConfirm, mealName, isEditing })
         React.createElement('div', { style: { fontSize: 11, color: 'var(--color-muted, #9A8878)', fontWeight: 500, marginBottom: 2 } }, isEditing ? 'Editando comida' : 'Comida'),
         React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 17, fontWeight: 800, color: 'var(--color-text, #1E1408)' } }, mealName || 'Tu registro'),
       ),
-      React.createElement('div', { onClick: onClose, style: { cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--color-sub, #7A6652)' } }, 'Cerrar')
+      React.createElement('button', {
+        onClick: onClose,
+        'aria-label': 'Cerrar carrito',
+        type: 'button',
+        style: { cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--color-sub, #7A6652)', background: 'transparent', border: 'none', padding: '8px 12px', minHeight: 44, font: 'inherit' }
+      }, 'Cerrar')
     ),
     items.length === 0
       ? React.createElement('div', { style: { textAlign: 'center', padding: '24px 0', color: 'var(--color-muted, #9A8878)', fontSize: 13 } }, 'No hay alimentos en tu registro.')
@@ -148,23 +155,25 @@ function CartSheet({ items, onRemove, onClose, onConfirm, mealName, isEditing })
               React.createElement('div', { style: { fontSize: 12, color: 'var(--color-muted, #9A8878)', marginTop: 1 } }, item.qtyLabel)
             ),
             React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 15, fontWeight: 800, color: '#F5D040', marginRight: 8 } }, `${item.totalKcal} kcal`),
-            React.createElement('div', {
+            React.createElement('button', {
               onClick: () => onRemove(i),
-              style: { width: 28, height: 28, borderRadius: 999, background: '#FFE0E0', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }
+              'aria-label': `Quitar ${item.name} del carrito`,
+              type: 'button',
+              style: { width: 44, height: 44, borderRadius: 999, background: 'var(--accent-danger-soft, #FFE0E0)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: 'none', padding: 0, flexShrink: 0 }
             },
-              React.createElement('svg', { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none', stroke: '#FF6B6B', strokeWidth: 2.5, strokeLinecap: 'round' },
+              React.createElement('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'var(--accent-danger, #FF6B6B)', strokeWidth: 2.5, strokeLinecap: 'round' },
                 React.createElement('line', { x1: 18, y1: 6, x2: 6, y2: 18 }),
                 React.createElement('line', { x1: 6, y1: 6, x2: 18, y2: 18 })
               )
             )
           )
         ),
-    items.length > 0 && React.createElement('div', { style: { background: '#FFF3C4', borderRadius: 12, padding: '12px 14px', margin: '14px 0' } },
+    items.length > 0 && React.createElement('div', { style: { background: 'var(--accent-gold-soft, #FFF3C4)', borderRadius: 12, padding: '12px 14px', margin: '14px 0' } },
       React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', marginBottom: 6 } },
-        React.createElement('span', { style: { fontSize: 14, fontWeight: 600, color: '#5C4200' } }, 'Total'),
-        React.createElement('span', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 16, fontWeight: 900, color: '#9A6D00' } }, `${totalKcal} kcal`)
+        React.createElement('span', { style: { fontSize: 14, fontWeight: 600, color: 'var(--accent-gold-text, #5C4200)' } }, 'Total'),
+        React.createElement('span', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 16, fontWeight: 900, color: 'var(--accent-gold-text, #9A6D00)' } }, `${totalKcal} kcal`)
       ),
-      React.createElement('div', { style: { display: 'flex', gap: 10, fontSize: 11, color: '#5C4200', fontWeight: 600 } },
+      React.createElement('div', { style: { display: 'flex', gap: 10, fontSize: 11, color: 'var(--accent-gold-text, #5C4200)', fontWeight: 600 } },
         React.createElement('span', null, `Prot. ${totalProtein.toFixed(0)}g`),
         React.createElement('span', null, `Carb. ${totalCarbs.toFixed(0)}g`),
         React.createElement('span', null, `Grasa ${totalFat.toFixed(0)}g`),
@@ -189,7 +198,14 @@ function AddMeal({ onBack, onAddMeal, onUpdateMeal, onGoToLibrary, mealName: ini
 
   // foodLibrary already includes both custom + DB foods (merged in index.html)
   const allFoods = foodLibrary || [];
-  const filtered = allFoods.filter(f => f.name.toLowerCase().includes(query.toLowerCase()));
+  // Accent-insensitive search: typing "platano" matches "Plátano". Without
+  // this, Spanish-speaking users would have to type the diacritic to find
+  // common foods.
+  const _norm = (typeof normalizeText === 'function') ? normalizeText : (s => (s || '').toLowerCase());
+  const queryN = _norm(query);
+  const filtered = queryN
+    ? allFoods.filter(f => _norm(f.name).includes(queryN))
+    : allFoods;
 
   function addToCart(item) {
     setCart(c => [...c, item]);
@@ -221,13 +237,14 @@ function AddMeal({ onBack, onAddMeal, onUpdateMeal, onGoToLibrary, mealName: ini
         ...totals,
       });
     } else if (onAddMeal) {
+      const now = new Date();
       onAddMeal({
         id: Date.now(),
         name: finalName,
         foods: cart,
         ...totals,
-        date: new Date().toDateString(),
-        time: new Date().toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' }),
+        date: (typeof localDateKey === 'function' ? localDateKey(now) : now.toDateString()),
+        time: now.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' }),
       });
     }
     setConfirmed(true);
@@ -253,8 +270,8 @@ function AddMeal({ onBack, onAddMeal, onUpdateMeal, onGoToLibrary, mealName: ini
       : `¡${headlineName} registrada!`;
 
     return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 14, padding: 24, background: 'var(--bg-main, #FEFAF3)' } },
-      React.createElement('div', { style: { width: 72, height: 72, background: '#D8F5DB', borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
-        React.createElement('svg', { width: 36, height: 36, viewBox: '0 0 24 24', fill: 'none', stroke: '#6BCB77', strokeWidth: 2.5, strokeLinecap: 'round', strokeLinejoin: 'round' },
+      React.createElement('div', { style: { width: 72, height: 72, background: 'var(--accent-success-soft, #D8F5DB)', borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+        React.createElement('svg', { width: 36, height: 36, viewBox: '0 0 24 24', fill: 'none', stroke: 'var(--accent-success, #6BCB77)', strokeWidth: 2.5, strokeLinecap: 'round', strokeLinejoin: 'round' },
           React.createElement('polyline', { points: '20 6 9 17 4 12' })
         )
       ),
@@ -263,9 +280,9 @@ function AddMeal({ onBack, onAddMeal, onUpdateMeal, onGoToLibrary, mealName: ini
       // Macro breakdown so the user can verify the values before leaving the screen.
       React.createElement('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, width: '100%', maxWidth: 320 } },
         [
-          { label: 'Proteína', val: totalProtein, color: '#7EC8E3', bg: '#DFF3FA' },
-          { label: 'Carbos',   val: totalCarbs,   color: '#FF8C69', bg: '#FFE4DB' },
-          { label: 'Grasa',    val: totalFat,     color: '#C5A3FF', bg: '#EFE4FF' },
+          { label: 'Proteína', val: totalProtein, color: 'var(--accent-protein, #7EC8E3)', bg: 'var(--accent-protein-soft, #DFF3FA)' },
+          { label: 'Carbos',   val: totalCarbs,   color: 'var(--accent-carbs, #FF8C69)',   bg: 'var(--accent-carbs-soft, #FFE4DB)' },
+          { label: 'Grasa',    val: totalFat,     color: 'var(--accent-fat, #C5A3FF)',     bg: 'var(--accent-fat-soft, #EFE4FF)' },
         ].map(m =>
           React.createElement('div', { key: m.label, style: { background: m.bg, borderRadius: 12, padding: '10px 8px', textAlign: 'center' } },
             React.createElement('div', { style: { fontSize: 10, fontWeight: 600, color: m.color, textTransform: 'uppercase', letterSpacing: '0.05em' } }, m.label),
@@ -282,8 +299,8 @@ function AddMeal({ onBack, onAddMeal, onUpdateMeal, onGoToLibrary, mealName: ini
   }
 
   return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', height: '100%', position: 'relative', background: 'var(--bg-main, #FEFAF3)' } },
-    React.createElement('div', { style: { padding: '12px 20px 12px', display: 'flex', alignItems: 'center', gap: 12 } },
-      React.createElement('div', { onClick: onBack, style: { cursor: 'pointer', padding: 4 } },
+    React.createElement('div', { style: { padding: '8px 12px 8px', display: 'flex', alignItems: 'center', gap: 8 } },
+      React.createElement(IconButton, { onClick: onBack, ariaLabel: 'Volver' },
         React.createElement(Icon, { name: 'back' })
       ),
       React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 20, fontWeight: 800, color: 'var(--color-text, #1E1408)', flex: 1 } }, isEditing ? 'Editar comida' : 'Agregar comida'),
@@ -334,13 +351,15 @@ function AddMeal({ onBack, onAddMeal, onUpdateMeal, onGoToLibrary, mealName: ini
               `${food.portion || (food.unit === 'u' ? '1 unidad' : '100g')} · ${food.unit === 'u' ? food.kcal : Math.round((food.kcalPerG || food.kcal / 100) * 100)} kcal`
             )
           ),
-          React.createElement('div', {
+          React.createElement('button', {
             onClick: () => setSelecting(food),
-            style: { width: 30, height: 30, borderRadius: 999, background: cartCounts[food.id] ? '#D8F5DB' : '#F5D040', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 1px 6px rgba(245,208,64,0.35)', flexShrink: 0 }
+            'aria-label': `Agregar ${food.name}`,
+            type: 'button',
+            style: { width: 44, height: 44, borderRadius: 999, background: cartCounts[food.id] ? 'var(--accent-success-soft, #D8F5DB)' : '#F5D040', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 1px 6px rgba(245,208,64,0.35)', flexShrink: 0, border: 'none', padding: 0 }
           },
             cartCounts[food.id]
-              ? React.createElement('span', { style: { fontSize: 11, fontWeight: 800, color: '#2A7D3A' } }, cartCounts[food.id] > 9 ? '9+' : String(cartCounts[food.id]))
-              : React.createElement('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: '#1E1408', strokeWidth: 2.5, strokeLinecap: 'round' },
+              ? React.createElement('span', { style: { fontSize: 13, fontWeight: 800, color: 'var(--accent-success-text, #2A7D3A)' } }, cartCounts[food.id] > 9 ? '9+' : String(cartCounts[food.id]))
+              : React.createElement('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: '#1E1408', strokeWidth: 2.5, strokeLinecap: 'round' },
                   React.createElement('line', { x1: 12, y1: 5, x2: 12, y2: 19 }),
                   React.createElement('line', { x1: 5, y1: 12, x2: 19, y2: 12 })
                 )

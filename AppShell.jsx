@@ -26,6 +26,29 @@ function Icon({ name, active = false }) {
   });
 }
 
+// IconButton — accessible 44×44 tap target. Use this for any clickable icon
+// (back arrow, bell, gear, close X). Renders a real <button> so it's keyboard
+// focusable and announced as a control by screen readers, while staying
+// visually identical to the previous div-with-onClick (transparent background,
+// no border). Pass `ariaLabel` always — icons need a textual label.
+function IconButton({ onClick, ariaLabel, children, size = 44, style = {}, disabled = false }) {
+  return React.createElement('button', {
+    onClick,
+    'aria-label': ariaLabel,
+    type: 'button',
+    disabled,
+    style: {
+      width: size, height: size,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: 'transparent', border: 'none', padding: 0, margin: 0,
+      cursor: disabled ? 'not-allowed' : 'pointer',
+      color: 'inherit', font: 'inherit',
+      borderRadius: 999,
+      ...style,
+    }
+  }, children);
+}
+
 function _fmtTime(d) { return d.getHours() + ':' + String(d.getMinutes()).padStart(2, '0'); }
 
 function StatusBar() {
@@ -81,14 +104,20 @@ function BottomNav({ screen, onNavigate }) {
     }
   },
     tabs.map(tab =>
-      React.createElement('div', {
+      React.createElement('button', {
         key: tab.id,
         onClick: () => onNavigate(tab.id === 'add' ? 'add' : tab.id),
+        'aria-label': tab.label,
+        'aria-current': screen === tab.id ? 'page' : undefined,
+        type: 'button',
         style: {
           flex: 1, display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'flex-end',
           gap: 4, cursor: 'pointer', padding: '4px 0',
           userSelect: 'none',
+          background: 'transparent', border: 'none',
+          color: 'inherit', font: 'inherit',
+          minHeight: 48,
         }
       },
         tab.fab
@@ -143,4 +172,4 @@ function AppShell({ screen, onNavigate, children }) {
   );
 }
 
-Object.assign(window, { AppShell, BottomNav, StatusBar, StatusBarSpacer, Icon, ICONS, _isMobile });
+Object.assign(window, { AppShell, BottomNav, StatusBar, StatusBarSpacer, Icon, IconButton, ICONS, _isMobile });

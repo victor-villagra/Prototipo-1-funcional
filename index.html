@@ -50,7 +50,12 @@
     }
   }
 
-  /* ── Dark theme ── */
+  /* ── Dark theme ──
+     Pastel accent backgrounds (gold-soft, protein, fat, etc.) get darker
+     siblings so cards that previously used hardcoded "#FFF3C4" don't render
+     as bright pastel splotches over a dark UI. The accent line color (e.g.
+     gold #F5C030) stays roughly the same so meal/macro identity is preserved.
+  */
   body.dark { background: #1A1208; }
   body.dark .phone-shell {
     background: #1E1408 !important;
@@ -62,6 +67,23 @@
     --color-muted: #8A7868;
     --border-color: #3A2C1E;
     --bg-input: #2A1E10;
+    --accent-gold: #F5C030;
+    --accent-gold-soft: #3A2C0E;
+    --accent-gold-text: #FFE682;
+    --accent-protein: #7EC8E3;
+    --accent-protein-soft: #1A2E38;
+    --accent-fat: #C5A3FF;
+    --accent-fat-soft: #2A1F3D;
+    --accent-carbs: #FF8C69;
+    --accent-carbs-soft: #3D1F14;
+    --accent-sugar: #FFB3C6;
+    --accent-sugar-soft: #3D1F26;
+    --accent-success: #6BCB77;
+    --accent-success-soft: #1A2E1F;
+    --accent-success-text: #9AE5A4;
+    --accent-danger: #FF6B6B;
+    --accent-danger-soft: #3D1A1A;
+    --accent-danger-text: #FFA0A0;
   }
   body.dark .phone-shell input,
   body.dark .phone-shell textarea {
@@ -78,6 +100,23 @@
     --color-muted: #9A8878;
     --border-color: #EAE0D0;
     --bg-input: #ffffff;
+    --accent-gold: #F5C030;
+    --accent-gold-soft: #FFF3C4;
+    --accent-gold-text: #9A6D00;
+    --accent-protein: #7EC8E3;
+    --accent-protein-soft: #DFF3FA;
+    --accent-fat: #C5A3FF;
+    --accent-fat-soft: #EFE4FF;
+    --accent-carbs: #FF8C69;
+    --accent-carbs-soft: #FFE4DB;
+    --accent-sugar: #FFB3C6;
+    --accent-sugar-soft: #FFE8EF;
+    --accent-success: #6BCB77;
+    --accent-success-soft: #D8F5DB;
+    --accent-success-text: #2A7D3A;
+    --accent-danger: #FF6B6B;
+    --accent-danger-soft: #FFE0E0;
+    --accent-danger-text: #C03030;
   }
 </style>
 
@@ -111,7 +150,7 @@ const { useState, useEffect } = React;
 
 // ── localStorage helpers ──────────────────────────────────────────
 const STORAGE_KEY = 'kcalia_v1';
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 function _pruneOldLogs(dailyLog) {
   if (!Array.isArray(dailyLog)) return [];
@@ -119,6 +158,20 @@ function _pruneOldLogs(dailyLog) {
   cutoff.setMonth(cutoff.getMonth() - 6);
   return dailyLog.filter(m => {
     try { return new Date(m.date) >= cutoff; } catch { return false; }
+  });
+}
+
+// v3: migrate meal.date from Date.toDateString() ("Mon May 09 2026") to a
+// stable "YYYY-MM-DD" local-date key so day comparisons stop drifting with
+// timezone changes. Old entries are converted using new Date() parsing, which
+// handles the toDateString format reliably in all browsers.
+function _migrateDates(dailyLog) {
+  if (!Array.isArray(dailyLog)) return [];
+  return dailyLog.map(m => {
+    if (!m || !m.date) return m;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(m.date)) return m;
+    const newKey = localDateKey(m.date);
+    return newKey ? { ...m, date: newKey } : m;
   });
 }
 
@@ -130,8 +183,10 @@ function loadState() {
     // Schema migration: v1 had no version field
     if (!parsed || typeof parsed !== 'object') return null;
     const data = parsed._v ? parsed.data : parsed; // unwrap versioned envelope if present
-    // Prune logs older than 6 months on load
-    if (data && data.dailyLog) data.dailyLog = _pruneOldLogs(data.dailyLog);
+    if (data && data.dailyLog) {
+      data.dailyLog = _migrateDates(data.dailyLog);
+      data.dailyLog = _pruneOldLogs(data.dailyLog);
+    }
     return data;
   } catch { return null; }
 }
@@ -303,7 +358,18 @@ function App() {
     setNotifPrefs(newPrefs);
   }
 
-  const today = new Date().toDateString();
+  // Re-render at local midnight so "today" rolls over without leaving stale
+  // meals visible. Keeps a tick state that bumps each new day.
+  const [, setDayTick] = useState(0);
+  useEffect(() => {
+    const now = new Date();
+    const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 1);
+    const ms = nextMidnight - now;
+    const t = setTimeout(() => setDayTick(n => n + 1), ms);
+    return () => clearTimeout(t);
+  });
+
+  const today = localDateKey(new Date());
   const todayMeals = dailyLog.filter(m => m.date === today);
   const unreadCount = notifications.filter(n => !n.read).length;
 

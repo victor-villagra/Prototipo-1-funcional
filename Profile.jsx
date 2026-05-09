@@ -344,7 +344,9 @@ function Profile({ userData, dailyGoals, onUpdateGoals, onNavigate, onLogout, on
   ];
 
   const name         = userData ? (userData.name || 'Usuario')       : 'Usuario';
-  const initials     = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  // Filter empty parts so a name like "Victor  Villagra" (double space) doesn't
+  // crash on n[0] for an empty token.
+  const initials     = name.split(/\s+/).filter(Boolean).map(n => n[0]).join('').toUpperCase().slice(0, 2);
   const weight       = userData ? userData.weight       : null;
   const targetWeight = userData ? userData.targetWeight : null;
   const height       = userData ? userData.height       : null;
@@ -387,9 +389,11 @@ function Profile({ userData, dailyGoals, onUpdateGoals, onNavigate, onLogout, on
           goalKey && React.createElement('div', { style: { background: '#FFF3C4', borderRadius: 999, padding: '3px 10px' } },
             React.createElement('span', { style: { fontSize: 11, fontWeight: 600, color: '#9A6D00' } }, GOAL_LABELS_MAP[goalKey] || goalKey)
           ),
-          activity && React.createElement('div', {
+          activity && React.createElement('button', {
             onClick: () => setShowEditActivity(true),
-            style: { background: '#D8F5DB', borderRadius: 999, padding: '6px 12px', cursor: 'pointer' }
+            'aria-label': `Editar nivel de actividad: ${ACTIVITY_MAP[activity] || activity}`,
+            type: 'button',
+            style: { background: '#D8F5DB', borderRadius: 999, padding: '8px 14px', cursor: 'pointer', border: 'none', font: 'inherit', minHeight: 36 }
           },
             React.createElement('span', { style: { fontSize: 11, fontWeight: 600, color: '#1F5F2A' } }, (ACTIVITY_MAP[activity] || activity) + ' ✎')
           )
@@ -411,9 +415,11 @@ function Profile({ userData, dailyGoals, onUpdateGoals, onNavigate, onLogout, on
     React.createElement('div', { style: { margin: '0 16px 14px', background: 'var(--bg-card, white)', borderRadius: 20, padding: '16px 18px', boxShadow: '0 2px 12px rgba(30,20,8,0.07)' } },
       React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--color-text, #1E1408)', marginBottom: 4 } }, 'Configuración'),
       // Editar perfil
-      React.createElement('div', {
+      React.createElement('button', {
         onClick: () => setShowEditProfile(true),
-        style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 0', borderBottom: '1px solid var(--border-color, #F5EFE4)', cursor: 'pointer' }
+        'aria-label': 'Editar perfil',
+        type: 'button',
+        style: { width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0', borderBottom: '1px solid var(--border-color, #F5EFE4)', cursor: 'pointer', background: 'transparent', border: 'none', borderTop: 'none', borderLeft: 'none', borderRight: 'none', color: 'inherit', font: 'inherit', minHeight: 48 }
       },
         React.createElement('span', { style: { fontSize: 14, fontWeight: 500, color: 'var(--color-text, #1E1408)' } }, 'Editar perfil'),
         React.createElement('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: '#B8A898', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' },
@@ -421,9 +427,11 @@ function Profile({ userData, dailyGoals, onUpdateGoals, onNavigate, onLogout, on
         )
       ),
       // Editar actividad
-      React.createElement('div', {
+      React.createElement('button', {
         onClick: () => setShowEditActivity(true),
-        style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 0', borderBottom: '1px solid var(--border-color, #F5EFE4)', cursor: 'pointer' }
+        'aria-label': 'Editar actividad y estilo de vida',
+        type: 'button',
+        style: { width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0', borderBottom: '1px solid var(--border-color, #F5EFE4)', cursor: 'pointer', background: 'transparent', border: 'none', borderTop: 'none', borderLeft: 'none', borderRight: 'none', color: 'inherit', font: 'inherit', minHeight: 48 }
       },
         React.createElement('div', null,
           React.createElement('span', { style: { fontSize: 14, fontWeight: 500, color: 'var(--color-text, #1E1408)' } }, 'Actividad y estilo de vida'),
@@ -434,9 +442,11 @@ function Profile({ userData, dailyGoals, onUpdateGoals, onNavigate, onLogout, on
         )
       ),
       // Rutina semanal
-      React.createElement('div', {
+      React.createElement('button', {
         onClick: () => setShowEditRoutine(true),
-        style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 0', borderBottom: '1px solid var(--border-color, #F5EFE4)', cursor: 'pointer' }
+        'aria-label': 'Editar rutina semanal',
+        type: 'button',
+        style: { width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0', borderBottom: '1px solid var(--border-color, #F5EFE4)', cursor: 'pointer', background: 'transparent', border: 'none', borderTop: 'none', borderLeft: 'none', borderRight: 'none', color: 'inherit', font: 'inherit', minHeight: 48 }
       },
         React.createElement('div', null,
           React.createElement('span', { style: { fontSize: 14, fontWeight: 500, color: 'var(--color-text, #1E1408)' } }, 'Rutina semanal'),
@@ -460,9 +470,11 @@ function Profile({ userData, dailyGoals, onUpdateGoals, onNavigate, onLogout, on
         )
       ),
       // Notificaciones
-      React.createElement('div', {
+      React.createElement('button', {
         onClick: () => setShowNotifSettings(true),
-        style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 0', borderBottom: '1px solid var(--border-color, #F5EFE4)', cursor: 'pointer' }
+        'aria-label': `Configurar notificaciones, actualmente ${notifEnabled ? 'activas' : 'desactivadas'}`,
+        type: 'button',
+        style: { width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0', borderBottom: '1px solid var(--border-color, #F5EFE4)', cursor: 'pointer', background: 'transparent', border: 'none', borderTop: 'none', borderLeft: 'none', borderRight: 'none', color: 'inherit', font: 'inherit', minHeight: 48 }
       },
         React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } },
           React.createElement('span', { style: { fontSize: 14, fontWeight: 500, color: 'var(--color-text, #1E1408)' } }, 'Notificaciones'),

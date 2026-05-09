@@ -56,17 +56,21 @@ function NextWeekGoals({ goals, onChange }) {
         React.createElement('div', { style: { width: 28, textAlign: 'center', fontSize: 12, fontWeight: 600, color: 'var(--color-sub, #7A6652)' } }, g.day),
         React.createElement('div', { style: { width: 8, height: 8, borderRadius: 999, background: TRAINING_COLORS[g.type] || '#D4C8B4', flexShrink: 0 } }),
         React.createElement('div', { style: { flex: 1, fontSize: 12, color: 'var(--color-muted, #9A8878)' } }, TRAINING_LABELS[g.type] || g.type),
-        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 4 } },
+        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 6 } },
           React.createElement('button', {
             onClick: () => onChange(i, g.kcal - 50),
             disabled: g.kcal <= 1000,
-            style: { width: 24, height: 24, borderRadius: 999, border: '1px solid var(--border-color, #EAE0D0)', background: 'var(--bg-card, white)', cursor: g.kcal <= 1000 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: g.kcal <= 1000 ? '#D4C8B4' : 'var(--color-sub, #7A6652)', opacity: g.kcal <= 1000 ? 0.5 : 1 }
+            'aria-label': `Reducir 50 kcal el ${g.day}`,
+            type: 'button',
+            style: { width: 36, height: 36, borderRadius: 999, border: '1px solid var(--border-color, #EAE0D0)', background: 'var(--bg-card, white)', cursor: g.kcal <= 1000 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 700, color: g.kcal <= 1000 ? '#D4C8B4' : 'var(--color-sub, #7A6652)', opacity: g.kcal <= 1000 ? 0.5 : 1, padding: 0 }
           }, '−'),
           React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 14, fontWeight: 800, color: 'var(--color-text, #1E1408)', minWidth: 44, textAlign: 'center' } }, g.kcal),
           React.createElement('button', {
             onClick: () => onChange(i, g.kcal + 50),
             disabled: g.kcal >= 4000,
-            style: { width: 24, height: 24, borderRadius: 999, background: g.kcal >= 4000 ? '#EAE0D0' : '#F5D040', border: 'none', cursor: g.kcal >= 4000 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, opacity: g.kcal >= 4000 ? 0.5 : 1 }
+            'aria-label': `Aumentar 50 kcal el ${g.day}`,
+            type: 'button',
+            style: { width: 36, height: 36, borderRadius: 999, background: g.kcal >= 4000 ? '#EAE0D0' : '#F5D040', border: 'none', cursor: g.kcal >= 4000 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 700, opacity: g.kcal >= 4000 ? 0.5 : 1, padding: 0 }
           }, '+')
         )
       )
@@ -82,10 +86,11 @@ function WeeklyAnalysis({ onBack, dailyLog, dailyGoals, userData, onUpdateGoals 
   const DAYS_SHORT = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
   const DAYS_FULL  = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
+  const _key = (typeof localDateKey === 'function') ? localDateKey : (d => d.toDateString());
   const weekSummary = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(today);
     d.setDate(today.getDate() - (6 - i));
-    const dateStr = d.toDateString();
+    const dateStr = _key(d);
     const dayMeals = (dailyLog || []).filter(m => m.date === dateStr);
     const kcal = Math.round(dayMeals.reduce((s, m) => s + (m.totalKcal || 0), 0));
     const routine = userData && userData.routine ? userData.routine : {};
@@ -140,9 +145,10 @@ function WeeklyAnalysis({ onBack, dailyLog, dailyGoals, userData, onUpdateGoals 
 
     // Compute protein average from actual logged meals to give a real insight.
     const weekStart = new Date(today); weekStart.setDate(today.getDate() - 6); weekStart.setHours(0, 0, 0, 0);
-    const weekMeals = (dailyLog || []).filter(m => {
-      try { return new Date(m.date) >= weekStart; } catch { return false; }
-    });
+    const weekStartKey = _key(weekStart);
+    // m.date is now a sortable "YYYY-MM-DD" key, so string comparison gives the
+    // same result as date comparison without paying for parsing each row.
+    const weekMeals = (dailyLog || []).filter(m => m.date >= weekStartKey);
     const totalProtein = weekMeals.reduce((s, m) => s + (m.totalProtein || 0), 0);
     const avgProtein   = daysLogged > 0 ? Math.round(totalProtein / daysLogged) : 0;
     const protGoal     = (dailyGoals && dailyGoals.protein) || 80;
@@ -188,8 +194,8 @@ function WeeklyAnalysis({ onBack, dailyLog, dailyGoals, userData, onUpdateGoals 
   }
 
   return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-main, #FEFAF3)' } },
-    React.createElement('div', { style: { padding: '12px 20px 16px', display: 'flex', alignItems: 'center', gap: 12 } },
-      React.createElement('div', { onClick: onBack, style: { cursor: 'pointer', padding: 4 } },
+    React.createElement('div', { style: { padding: '8px 12px 12px', display: 'flex', alignItems: 'center', gap: 8 } },
+      React.createElement(IconButton, { onClick: onBack, ariaLabel: 'Volver' },
         React.createElement(Icon, { name: 'back' })
       ),
       React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 20, fontWeight: 800, color: 'var(--color-text, #1E1408)' } }, 'Análisis semanal')

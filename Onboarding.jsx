@@ -33,9 +33,11 @@ const TRAINING_TYPES = [
 function StepHeader({ step, total, title, sub, onBack }) {
   return React.createElement('div', { style: { padding: '16px 24px 20px' } },
     React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 } },
-      onBack && React.createElement('div', {
+      onBack && React.createElement('button', {
         onClick: onBack,
-        style: { cursor: 'pointer', padding: 4, marginRight: 4, display: 'flex', alignItems: 'center' }
+        'aria-label': 'Paso anterior',
+        type: 'button',
+        style: { cursor: 'pointer', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none', padding: 0, marginLeft: -10 }
       },
         React.createElement('svg', { width: 22, height: 22, viewBox: '0 0 24 24', fill: 'none', stroke: '#1E1408', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' },
           React.createElement('polyline', { points: '15 18 9 12 15 6' })
@@ -347,7 +349,7 @@ function PersonalGoalStep({ data, setData, onNext, onBack }) {
             'Aprender a comer equilibrado',
             'Reducir grasa abdominal',
           ].map(chip =>
-            React.createElement('div', {
+            React.createElement('button', {
               key: chip,
               onClick: () => {
                 const current = data.personalGoal || '';
@@ -356,10 +358,13 @@ function PersonalGoalStep({ data, setData, onNext, onBack }) {
                   setData({ ...data, personalGoal: newText });
                 }
               },
+              type: 'button',
+              'aria-label': `Añadir sugerencia: ${chip}`,
               style: {
-                padding: '6px 12px', borderRadius: 999, background: '#F5EFE4',
+                padding: '10px 14px', borderRadius: 999, background: '#F5EFE4',
                 fontSize: 12, color: '#5A4838', cursor: 'pointer', fontWeight: 500,
                 transition: 'all 0.15s', border: '1px solid transparent',
+                font: 'inherit', minHeight: 36,
               },
               onMouseEnter: e => { e.currentTarget.style.background = '#FFF3C4'; e.currentTarget.style.borderColor = '#F5D040'; },
               onMouseLeave: e => { e.currentTarget.style.background = '#F5EFE4'; e.currentTarget.style.borderColor = 'transparent'; },

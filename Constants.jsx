@@ -83,6 +83,27 @@ const DAYS_ES_FULL  = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']; // in
 
 const DEFAULT_DAILY_GOALS = { kcal: 2000, protein: 80, fat: 70, carbs: 300, sugar: 50 };
 
+// Strip accents and lowercase for accent-insensitive search and matching.
+// "Plátano" and "platano" both normalize to "platano" so a Spanish-speaking
+// user can type without diacritics and still find foods. The regex targets
+// the Unicode "combining diacritical marks" block (U+0300–U+036F).
+function normalizeText(s) {
+  return (s || '').toString().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+// Local-timezone date key as "YYYY-MM-DD". Used as the canonical date for meals
+// instead of Date.toDateString(), which produces locale-dependent strings like
+// "Mon May 09 2026" and shifts when the device timezone changes. This format is
+// stable, sortable, and tied to the user's local day boundary.
+function localDateKey(d) {
+  const date = d instanceof Date ? d : new Date(d);
+  if (isNaN(date.getTime())) return '';
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 // Returns a sensible meal name based on the current hour, so quick-add entries
 // don't all collapse to the generic word "Comida" in the daily log.
 function defaultMealNameForHour(hour) {
@@ -146,6 +167,8 @@ Object.assign(window, {
   TRAINING_LABELS, TRAINING_COLORS, TRAINING_BG,
   DAYS_ES_SHORT, DAYS_ES_FULL,
   DEFAULT_DAILY_GOALS,
+  normalizeText,
+  localDateKey,
   defaultMealNameForHour,
   computeNutritionTargets,
   parseClampedNumber,

@@ -1,11 +1,15 @@
 // Dashboard.jsx — Home screen with calorie ring, macro bars, meal log
 
+// Meal card icon backgrounds. Use CSS vars so dark mode darkens the pastel
+// background while keeping the same accent hue on the icon. Hardcoded fallbacks
+// match the light-mode palette in case Constants.jsx loaded before the theme
+// vars were defined.
 const MEAL_COLORS = [
-  { color: '#FFF3C4', iconColor: '#F5C030' },
-  { color: '#FFE5CC', iconColor: '#FFAB5E' },
-  { color: '#FFE8EF', iconColor: '#FFB3C6' },
-  { color: '#DFF3FA', iconColor: '#7EC8E3' },
-  { color: '#EFE4FF', iconColor: '#C5A3FF' },
+  { color: 'var(--accent-gold-soft, #FFF3C4)',    iconColor: 'var(--accent-gold, #F5C030)' },
+  { color: 'var(--accent-carbs-soft, #FFE5CC)',   iconColor: 'var(--accent-carbs, #FFAB5E)' },
+  { color: 'var(--accent-sugar-soft, #FFE8EF)',   iconColor: 'var(--accent-sugar, #FFB3C6)' },
+  { color: 'var(--accent-protein-soft, #DFF3FA)', iconColor: 'var(--accent-protein, #7EC8E3)' },
+  { color: 'var(--accent-fat-soft, #EFE4FF)',     iconColor: 'var(--accent-fat, #C5A3FF)' },
 ];
 
 function CalorieRing({ consumed, goal }) {
@@ -39,8 +43,8 @@ function CalorieRing({ consumed, goal }) {
         React.createElement('div', { style: { fontSize: 11, color: 'var(--color-muted, #9A8878)', fontWeight: 500 } }, 'Restante'),
         React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 20, fontWeight: 800, color: remaining > 0 ? '#6BCB77' : '#FF8C69' } }, remaining.toLocaleString()),
       ),
-      React.createElement('div', { style: { background: consumed > safeGoal ? '#FFE0E0' : '#FFF3C4', borderRadius: 999, padding: '4px 12px' } },
-        React.createElement('span', { style: { fontSize: 12, fontWeight: 600, color: consumed > safeGoal ? '#C03030' : '#9A6D00' } }, `${Math.round(pct * 100)}% completado`)
+      React.createElement('div', { style: { background: consumed > safeGoal ? 'var(--accent-danger-soft, #FFE0E0)' : 'var(--accent-gold-soft, #FFF3C4)', borderRadius: 999, padding: '4px 12px' } },
+        React.createElement('span', { style: { fontSize: 12, fontWeight: 600, color: consumed > safeGoal ? 'var(--accent-danger-text, #C03030)' : 'var(--accent-gold-text, #9A6D00)' } }, `${Math.round(pct * 100)}% completado`)
       )
     )
   );
@@ -63,14 +67,21 @@ function MacroBar({ label, val, goal, color, unit }) {
 function MealCard({ meal, idx, onTap }) {
   const c = MEAL_COLORS[idx % MEAL_COLORS.length];
   const items = meal.foods ? meal.foods.map(f => f.name) : (meal.items || []);
-  return React.createElement('div', {
+  const accessibleLabel = `${meal.name}, ${Math.round(meal.totalKcal || meal.kcal || 0)} kcal${meal.time ? ', ' + meal.time : ''}`;
+  return React.createElement('button', {
     onClick: onTap,
+    'aria-label': accessibleLabel,
+    type: 'button',
     style: {
+      width: '100%',
       background: 'var(--bg-card, white)', borderRadius: 16, padding: '14px 16px',
       boxShadow: '0 2px 12px rgba(30,20,8,0.07)',
       display: 'flex', alignItems: 'center', gap: 12,
       cursor: 'pointer', marginBottom: 10, userSelect: 'none',
       transition: 'transform 100ms',
+      border: 'none', textAlign: 'left',
+      color: 'inherit', font: 'inherit',
+      minHeight: 64,
     },
     onMouseDown: e => e.currentTarget.style.transform = 'scale(0.98)',
     onMouseUp:   e => e.currentTarget.style.transform = 'scale(1)',
@@ -118,7 +129,12 @@ function MealDetailSheet({ meal, onClose, onDelete, onEdit }) {
         React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 18, fontWeight: 800, color: 'var(--color-text, #1E1408)' } }, meal.name),
         meal.time && React.createElement('div', { style: { fontSize: 12, color: 'var(--color-muted, #9A8878)', marginTop: 2 } }, meal.time)
       ),
-      React.createElement('div', { onClick: onClose, style: { cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--color-sub, #7A6652)' } }, 'Cerrar')
+      React.createElement('button', {
+        onClick: onClose,
+        'aria-label': 'Cerrar detalles de comida',
+        type: 'button',
+        style: { cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--color-sub, #7A6652)', background: 'transparent', border: 'none', padding: '8px 12px', minHeight: 44, font: 'inherit' }
+      }, 'Cerrar')
     ),
     React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 14 } },
       [
@@ -191,11 +207,13 @@ function Dashboard({ onNavigate, userData, todayMeals, dailyGoals, unreadCount, 
         React.createElement('div', { style: { fontSize: 14, color: 'var(--color-sub, #7A6652)', fontWeight: 500 } }, greeting + ','),
         React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 26, fontWeight: 800, color: 'var(--color-text, #1E1408)', lineHeight: 1.2 } }, (userName || 'Usuario') + ' 👋'),
       ),
-      React.createElement('div', {
-        style: { width: 42, height: 42, borderRadius: 999, background: '#FFF3C4', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', position: 'relative' },
+      React.createElement('button', {
+        'aria-label': (unreadCount || 0) > 0 ? `Notificaciones, ${unreadCount} sin leer` : 'Notificaciones',
+        type: 'button',
+        style: { width: 44, height: 44, borderRadius: 999, background: 'var(--accent-gold-soft, #FFF3C4)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', position: 'relative', border: 'none', padding: 0 },
         onClick: () => onNavigate('notifications'),
       },
-        React.createElement('svg', { width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none', stroke: '#F5C030', strokeWidth: 1.8, strokeLinecap: 'round' },
+        React.createElement('svg', { width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none', stroke: 'var(--accent-gold, #F5C030)', strokeWidth: 1.8, strokeLinecap: 'round' },
           React.createElement('path', { d: 'M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9' }),
           React.createElement('path', { d: 'M13.73 21a2 2 0 0 1-3.46 0' })
         ),
@@ -229,16 +247,21 @@ function Dashboard({ onNavigate, userData, todayMeals, dailyGoals, unreadCount, 
             React.createElement('div', { style: { fontSize: 14, color: 'var(--color-sub, #7A6652)', fontWeight: 500 } }, 'Aún no has registrado comidas hoy'),
             React.createElement('div', { style: { fontSize: 12, color: 'var(--color-muted, #9A8878)', marginTop: 4 } }, 'Toca + para agregar tu primera comida')
           ),
-      React.createElement('div', {
+      React.createElement('button', {
         onClick: () => onNavigate('add', ''),
+        'aria-label': 'Agregar comida',
+        type: 'button',
         style: {
+          width: '100%',
           border: '1.5px dashed var(--border-color, #D4C8B4)', borderRadius: 16, padding: '14px 16px',
           display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
           justifyContent: 'center', marginTop: 4,
+          background: 'transparent', color: 'inherit', font: 'inherit',
+          minHeight: 56,
         }
       },
-        React.createElement('div', { style: { width: 28, height: 28, background: '#FFF3C4', borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
-          React.createElement('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: '#F5C030', strokeWidth: 2.2, strokeLinecap: 'round' },
+        React.createElement('div', { style: { width: 28, height: 28, background: 'var(--accent-gold-soft, #FFF3C4)', borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+          React.createElement('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'var(--accent-gold, #F5C030)', strokeWidth: 2.2, strokeLinecap: 'round' },
             React.createElement('line', { x1: 12, y1: 5, x2: 12, y2: 19 }),
             React.createElement('line', { x1: 5, y1: 12, x2: 19, y2: 12 })
           )

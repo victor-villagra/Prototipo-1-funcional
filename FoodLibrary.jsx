@@ -178,7 +178,10 @@ function _buildDBFood(entry, idx) {
 
 const DB_FOODS = NUTRITION_DB.map(_buildDBFood);
 
-function _norm(s) { return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+// Local fallback for diacritic-insensitive matching. Prefers the shared
+// normalizeText from Constants.jsx when available so all search code paths
+// behave identically.
+const _norm = (typeof normalizeText === 'function') ? normalizeText : (s => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''));
 
 function findFoodInDB(name) {
   const q = _norm(name);
@@ -216,7 +219,12 @@ function FoodDetailSheet({ food, onClose, onDelete, onEdit }) {
     React.createElement('div', { style: { width: 36, height: 4, background: '#D4C8B4', borderRadius: 999, margin: '12px auto 16px' } }),
     React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 } },
       React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 18, fontWeight: 800, color: 'var(--color-text, #1E1408)' } }, food.name),
-      React.createElement('div', { onClick: onClose, style: { cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--color-sub, #7A6652)' } }, 'Cerrar')
+      React.createElement('button', {
+        onClick: onClose,
+        'aria-label': 'Cerrar detalles',
+        type: 'button',
+        style: { cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--color-sub, #7A6652)', background: 'transparent', border: 'none', padding: '8px 12px', minHeight: 44, font: 'inherit' }
+      }, 'Cerrar')
     ),
     React.createElement('div', { style: { fontSize: 13, color: 'var(--color-muted, #9A8878)', marginBottom: 16 } }, `Valores por ${perLabel}`),
     React.createElement('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 } },
@@ -315,9 +323,11 @@ function AddFoodSheet({ onClose, onSave, editFood }) {
       React.createElement('div', { style: { fontSize: 13, fontWeight: 600, color: 'var(--color-sub, #5A4838)', marginBottom: 5 } }, 'Unidad de medida'),
       React.createElement('div', { style: { display: 'flex', gap: 8 } },
         [{ id: 'g', label: 'Por gramo (g)' }, { id: 'u', label: 'Por unidad' }].map(u =>
-          React.createElement('div', {
+          React.createElement('button', {
             key: u.id, onClick: () => update('unit', u.id),
-            style: { flex: 1, padding: '10px', borderRadius: 12, border: `1.5px solid ${form.unit === u.id ? '#F5D040' : 'var(--border-color, #EAE0D0)'}`, background: form.unit === u.id ? '#FFF3C4' : 'var(--bg-card, white)', textAlign: 'center', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: form.unit === u.id ? '#9A6D00' : 'var(--color-sub, #5A4838)' }
+            'aria-pressed': form.unit === u.id,
+            type: 'button',
+            style: { flex: 1, padding: '12px 10px', borderRadius: 12, border: `1.5px solid ${form.unit === u.id ? '#F5D040' : 'var(--border-color, #EAE0D0)'}`, background: form.unit === u.id ? '#FFF3C4' : 'var(--bg-card, white)', textAlign: 'center', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: form.unit === u.id ? '#9A6D00' : 'var(--color-sub, #5A4838)', font: 'inherit', minHeight: 44 }
           }, u.label)
         )
       )
@@ -397,9 +407,11 @@ function FoodRow({ food, onSelect }) {
   const isGram = food.unit === 'g';
   const kcalPer = isGram ? Math.round((food.kcalPerG || food.kcal) * 100) : food.kcal;
 
-  return React.createElement('div', {
+  return React.createElement('button', {
     onClick: () => onSelect(food),
-    style: { background: 'var(--bg-card, white)', borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 1px 8px rgba(30,20,8,0.06)', marginBottom: 8, cursor: 'pointer' }
+    'aria-label': `${food.name}, ${Math.round(kcalPer)} kcal por ${isGram ? '100 gramos' : 'unidad'}`,
+    type: 'button',
+    style: { width: '100%', textAlign: 'left', background: 'var(--bg-card, white)', borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 1px 8px rgba(30,20,8,0.06)', marginBottom: 8, cursor: 'pointer', border: 'none', color: 'inherit', font: 'inherit', minHeight: 56 }
   },
     React.createElement('div', { style: { flex: 1 } },
       React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 6 } },
@@ -444,7 +456,13 @@ function FoodLibrary({ onBack, library, onUpdateLibrary }) {
   ];
 
   const tabFoods = tab === 'custom' ? customFoods : tab === 'db' ? DB_FOODS : allFoods;
-  const filtered = tabFoods.filter(f => f.name.toLowerCase().includes(query.toLowerCase()));
+  // Accent-insensitive: "platano" finds "Plátano". Use the global normalizeText
+  // helper so search behavior matches AddMeal exactly.
+  const _normSearch = (typeof normalizeText === 'function') ? normalizeText : _norm;
+  const queryN = _normSearch(query);
+  const filtered = queryN
+    ? tabFoods.filter(f => _normSearch(f.name).includes(queryN))
+    : tabFoods;
 
   function handleSave(normalized) {
     if (!onUpdateLibrary) { setShowAdd(false); setEditFood(null); return; }
@@ -481,14 +499,16 @@ function FoodLibrary({ onBack, library, onUpdateLibrary }) {
   }
 
   return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', height: '100%', position: 'relative', background: 'var(--bg-main, #FEFAF3)' } },
-    React.createElement('div', { style: { padding: '12px 20px 0', display: 'flex', alignItems: 'center', gap: 12 } },
-      React.createElement('div', { onClick: onBack, style: { cursor: 'pointer', padding: 4 } },
+    React.createElement('div', { style: { padding: '8px 12px 0', display: 'flex', alignItems: 'center', gap: 8 } },
+      React.createElement(IconButton, { onClick: onBack, ariaLabel: 'Volver' },
         React.createElement(Icon, { name: 'back' })
       ),
       React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 20, fontWeight: 800, color: 'var(--color-text, #1E1408)', flex: 1 } }, 'Biblioteca de alimentos'),
-      React.createElement('div', {
+      React.createElement('button', {
         onClick: () => { setEditFood(null); setShowAdd(true); },
-        style: { width: 36, height: 36, background: '#F5D040', borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 8px rgba(245,208,64,0.35)' }
+        'aria-label': 'Agregar alimento personalizado',
+        type: 'button',
+        style: { width: 44, height: 44, background: '#F5D040', borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 8px rgba(245,208,64,0.35)', border: 'none', padding: 0 }
       },
         React.createElement('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: '#1E1408', strokeWidth: 2.2, strokeLinecap: 'round' },
           React.createElement('line', { x1: 12, y1: 5, x2: 12, y2: 19 }),
@@ -499,10 +519,12 @@ function FoodLibrary({ onBack, library, onUpdateLibrary }) {
     // Tabs
     React.createElement('div', { style: { padding: '10px 20px 0', display: 'flex', gap: 6 } },
       LIBRARY_TABS.map(t =>
-        React.createElement('div', {
+        React.createElement('button', {
           key: t.id,
           onClick: () => setTab(t.id),
-          style: { padding: '7px 16px', borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: 'pointer', background: tab === t.id ? '#F5D040' : 'var(--bg-card, white)', color: tab === t.id ? '#1E1408' : 'var(--color-sub, #7A6652)', border: tab === t.id ? 'none' : '1.5px solid var(--border-color, #EAE0D0)', transition: 'all 0.15s' }
+          'aria-pressed': tab === t.id,
+          type: 'button',
+          style: { padding: '10px 16px', borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: 'pointer', background: tab === t.id ? '#F5D040' : 'var(--bg-card, white)', color: tab === t.id ? '#1E1408' : 'var(--color-sub, #7A6652)', border: tab === t.id ? '1.5px solid #F5D040' : '1.5px solid var(--border-color, #EAE0D0)', transition: 'all 0.15s', font: 'inherit', minHeight: 40 }
         }, t.label)
       )
     ),

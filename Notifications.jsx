@@ -4,11 +4,11 @@
 // applied to body text — body uses var(--color-text)/var(--color-sub) which meet
 // AA contrast on the soft pastel backgrounds.
 const NOTIF_STYLES = {
-  reminder:   { icon: '⏰', color: '#3A8FB7', bg: '#DFF3FA', label: 'Recordatorio' },
-  alert:      { icon: '⚠️', color: '#B5651D', bg: '#FEF0D0', label: 'Alerta' },
-  report:     { icon: '📊', color: '#7A52CC', bg: '#EFE4FF', label: 'Reporte' },
-  motivation: { icon: '🎉', color: '#2F8C42', bg: '#D8F5DB', label: 'Motivación' },
-  tip:        { icon: '💡', color: '#A06C00', bg: '#FFF3C4', label: 'Consejo' },
+  reminder:   { icon: '⏰', color: '#3A8FB7', bg: 'var(--accent-protein-soft, #DFF3FA)', label: 'Recordatorio' },
+  alert:      { icon: '⚠️', color: '#B5651D', bg: 'var(--accent-carbs-soft, #FEF0D0)',   label: 'Alerta' },
+  report:     { icon: '📊', color: '#7A52CC', bg: 'var(--accent-fat-soft, #EFE4FF)',     label: 'Reporte' },
+  motivation: { icon: '🎉', color: '#2F8C42', bg: 'var(--accent-success-soft, #D8F5DB)', label: 'Motivación' },
+  tip:        { icon: '💡', color: '#A06C00', bg: 'var(--accent-gold-soft, #FFF3C4)',    label: 'Consejo' },
 };
 
 const DEFAULT_NOTIF_PREFS = {
@@ -25,7 +25,6 @@ function generateAppNotifications(todayMeals, dailyGoals, dailyLog, userData, ex
   if (!prefs || !prefs.enabled) return [];
   const out = [];
   const now = new Date();
-  const todayStr = now.toDateString();
   const hour = now.getHours();
 
   // Deduplication: meal reminders by hour-window, one-per-day for rest.
@@ -45,12 +44,13 @@ function generateAppNotifications(todayMeals, dailyGoals, dailyLog, userData, ex
     if (hour >= 7 && hour < 11 && todayMeals.length === 0 && !has('breakfast_rem', 4)) {
       out.push({ type: 'reminder', subtype: 'breakfast_rem', title: '¿Ya desayunaste? 🍳', message: 'Registra tu desayuno para mantener el seguimiento al día.', action: { screen: 'add', mealName: 'Desayuno' } });
     }
+    const _normN = (typeof normalizeText === 'function') ? normalizeText : (s => (s || '').toLowerCase());
     if (hour >= 12 && hour < 15 && !has('lunch_rem', 3)) {
-      const hasLunch = todayMeals.some(m => (m.name || '').toLowerCase().includes('almuerzo'));
+      const hasLunch = todayMeals.some(m => _normN(m.name).includes('almuerzo'));
       if (!hasLunch) out.push({ type: 'reminder', subtype: 'lunch_rem', title: 'Hora del almuerzo 🍽️', message: 'No olvides registrar tu almuerzo para no perder el seguimiento.', action: { screen: 'add', mealName: 'Almuerzo' } });
     }
     if (hour >= 19 && hour < 23 && !has('dinner_rem', 4)) {
-      const hasDinner = todayMeals.some(m => (m.name || '').toLowerCase().includes('cena'));
+      const hasDinner = todayMeals.some(m => _normN(m.name).includes('cena'));
       if (!hasDinner) out.push({ type: 'reminder', subtype: 'dinner_rem', title: '¿Ya cenaste? 🌙', message: 'Registra tu cena antes de terminar el día.', action: { screen: 'add', mealName: 'Cena' } });
     }
   }
@@ -85,8 +85,10 @@ function generateAppNotifications(todayMeals, dailyGoals, dailyLog, userData, ex
       { title: '¡Gran progreso! 🚀', message: 'Registrar lo que comes es el primer paso hacia tus objetivos.' },
     ];
     // Only show if at least 1 day logged this week
-    const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay());
-    const hasWeekData = (dailyLog || []).some(m => new Date(m.date) >= weekStart);
+    const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay()); weekStart.setHours(0, 0, 0, 0);
+    const _key = (typeof localDateKey === 'function') ? localDateKey : (d => d.toDateString());
+    const weekStartKey = _key(weekStart);
+    const hasWeekData = (dailyLog || []).some(m => m.date >= weekStartKey);
     if (hasWeekData) {
       const pick = motivs[Math.floor(Math.random() * motivs.length)];
       out.push({ type: 'motivation', subtype: 'daily_motiv', ...pick });
@@ -128,14 +130,14 @@ function NotificationCenter({ notifications, onMarkRead, onMarkAllRead, onClearA
 
   return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-main, #FEFAF3)' } },
     // Header
-    React.createElement('div', { style: { padding: '12px 20px 12px', display: 'flex', alignItems: 'center', gap: 12 } },
-      React.createElement('div', { onClick: onBack, style: { cursor: 'pointer', padding: 4 } },
+    React.createElement('div', { style: { padding: '8px 12px 8px', display: 'flex', alignItems: 'center', gap: 8 } },
+      React.createElement(IconButton, { onClick: onBack, ariaLabel: 'Volver' },
         React.createElement(Icon, { name: 'back' })
       ),
       React.createElement('div', { style: { flex: 1 } },
         React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 20, fontWeight: 800, color: 'var(--color-text, #1E1408)' } }, 'Notificaciones'),
       ),
-      React.createElement('div', { onClick: onOpenSettings, style: { cursor: 'pointer', padding: 4 } },
+      React.createElement(IconButton, { onClick: onOpenSettings, ariaLabel: 'Configurar notificaciones' },
         React.createElement(Icon, { name: 'settings' })
       )
     ),
@@ -143,9 +145,17 @@ function NotificationCenter({ notifications, onMarkRead, onMarkAllRead, onClearA
     // Action bar
     notifications.length > 0 && React.createElement('div', { style: { padding: '0 20px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
       React.createElement('span', { style: { fontSize: 12, fontWeight: 600, color: 'var(--color-muted, #9A8878)' } }, `${unread} sin leer · ${notifications.length} total`),
-      React.createElement('div', { style: { display: 'flex', gap: 12 } },
-        unread > 0 && React.createElement('span', { onClick: onMarkAllRead, style: { fontSize: 12, fontWeight: 600, color: '#7EC8E3', cursor: 'pointer' } }, 'Leer todo'),
-        React.createElement('span', { onClick: onClearAll, style: { fontSize: 12, fontWeight: 600, color: '#FF8C69', cursor: 'pointer' } }, 'Limpiar')
+      React.createElement('div', { style: { display: 'flex', gap: 4 } },
+        unread > 0 && React.createElement('button', {
+          onClick: onMarkAllRead,
+          type: 'button',
+          style: { fontSize: 12, fontWeight: 600, color: '#7EC8E3', cursor: 'pointer', background: 'transparent', border: 'none', padding: '8px 10px', minHeight: 44, font: 'inherit' }
+        }, 'Leer todo'),
+        React.createElement('button', {
+          onClick: onClearAll,
+          type: 'button',
+          style: { fontSize: 12, fontWeight: 600, color: '#FF8C69', cursor: 'pointer', background: 'transparent', border: 'none', padding: '8px 10px', minHeight: 44, font: 'inherit' }
+        }, 'Limpiar')
       )
     ),
 
@@ -159,20 +169,26 @@ function NotificationCenter({ notifications, onMarkRead, onMarkAllRead, onClearA
           )
         : notifications.map(n => {
             const s = NOTIF_STYLES[n.type] || NOTIF_STYLES.tip;
-            return React.createElement('div', {
+            const isInteractive = !!n.action || !n.read;
+            const Tag = isInteractive ? 'button' : 'div';
+            return React.createElement(Tag, {
               key: n.id,
-              onClick: () => {
+              onClick: isInteractive ? () => {
                 if (!n.read) onMarkRead(n.id);
                 if (n.action) onAction(n.action);
-              },
+              } : undefined,
+              type: isInteractive ? 'button' : undefined,
+              'aria-label': isInteractive ? `${n.title}. ${n.message}` : undefined,
               style: {
+                width: '100%', textAlign: 'left',
                 background: n.read ? 'var(--bg-card, white)' : s.bg,
                 border: `1.5px solid ${n.read ? 'var(--border-color, #EAE0D0)' : s.color + '44'}`,
                 borderRadius: 16, padding: '12px 14px', marginBottom: 8,
-                cursor: n.action ? 'pointer' : 'default',
+                cursor: isInteractive ? 'pointer' : 'default',
                 opacity: n.read ? 0.75 : 1,
                 transition: 'all 0.15s',
                 position: 'relative',
+                color: 'inherit', font: 'inherit',
               }
             },
               !n.read && React.createElement('div', { style: { position: 'absolute', top: 10, right: 10, width: 8, height: 8, borderRadius: 999, background: s.color } }),
@@ -248,7 +264,7 @@ function NotificationSettingsSheet({ prefs, onUpdatePrefs, onClose }) {
     ),
 
     // Info note — clarifies that the in-app notification center already works.
-    React.createElement('div', { style: { marginTop: 16, padding: '10px 14px', background: '#DFF3FA', borderRadius: 12, fontSize: 12, color: '#3A7A9A', lineHeight: 1.5, display: 'flex', alignItems: 'flex-start', gap: 8 } },
+    React.createElement('div', { style: { marginTop: 16, padding: '10px 14px', background: 'var(--accent-protein-soft, #DFF3FA)', borderRadius: 12, fontSize: 12, color: '#3A7A9A', lineHeight: 1.5, display: 'flex', alignItems: 'flex-start', gap: 8 } },
       React.createElement('span', { style: { fontSize: 14, flexShrink: 0 } }, 'ℹ️'),
       'Las notificaciones se muestran dentro de la app, en el centro de notificaciones (icono de campana). Las notificaciones push del sistema se sumarán en una próxima versión.'
     ),

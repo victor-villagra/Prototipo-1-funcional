@@ -122,10 +122,11 @@ function Progress({ dailyLog, dailyGoals }) {
 
   // Build week data from dailyLog
   const today = new Date();
+  const _key = (typeof localDateKey === 'function') ? localDateKey : (d => d.toDateString());
   const weekData = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(today);
     d.setDate(today.getDate() - (6 - i));
-    const dateStr = d.toDateString();
+    const dateStr = _key(d);
     const dayMeals = (dailyLog || []).filter(m => m.date === dateStr);
     const kcal = dayMeals.reduce((s, m) => s + (m.totalKcal || 0), 0);
     const dayLabel = ['D', 'L', 'M', 'X', 'J', 'V', 'S'][d.getDay()];
@@ -145,7 +146,7 @@ function Progress({ dailyLog, dailyGoals }) {
 
   const DAYS_ES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
   const historyEntries = historyDates.map((d, i) => {
-    const dateStr = d.toDateString();
+    const dateStr = _key(d);
     const dayMeals = (dailyLog || []).filter(m => m.date === dateStr);
     const kcal = Math.round(dayMeals.reduce((s, m) => s + (m.totalKcal || 0), 0));
     const label = i === 0 ? 'Hoy' : i === 1 ? 'Ayer' : `${DAYS_ES[d.getDay()]} ${d.getDate()}`;
