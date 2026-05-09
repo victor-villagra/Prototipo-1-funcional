@@ -177,7 +177,7 @@ function MealDetailSheet({ meal, onClose, onDelete, onEdit }) {
   );
 }
 
-function Dashboard({ onNavigate, userData, todayMeals, dailyGoals, unreadCount, onDeleteMeal, onEditMeal }) {
+function Dashboard({ onNavigate, userData, todayMeals, dailyGoals, unreadCount, onDeleteMeal, onEditMeal, todayWaterMl = 0, waterGoal = 2000, onAddWater, onUndoLastWater, onUpdateWaterGoal }) {
   const goals = dailyGoals || { kcal: 2000, protein: 80, fat: 70, carbs: 300, sugar: 50 };
   const [selectedMeal, setSelectedMeal] = React.useState(null);
 
@@ -227,6 +227,13 @@ function Dashboard({ onNavigate, userData, todayMeals, dailyGoals, unreadCount, 
     React.createElement('div', { style: { margin: '16px 16px 0', background: 'var(--bg-card, white)', borderRadius: 24, padding: '20px 16px', boxShadow: '0 2px 12px rgba(30,20,8,0.08)' } },
       React.createElement(CalorieRing, { consumed: Math.round(totals.kcal), goal: goals.kcal })
     ),
+    typeof WaterTracker !== 'undefined' && React.createElement(WaterTracker, {
+      consumed: todayWaterMl,
+      goal: waterGoal,
+      onAdd: onAddWater,
+      onUndo: onUndoLastWater,
+      onEditGoal: onUpdateWaterGoal,
+    }),
     React.createElement('div', { style: { margin: '14px 16px 0', background: 'var(--bg-card, white)', borderRadius: 20, padding: '16px 18px', boxShadow: '0 2px 12px rgba(30,20,8,0.07)' } },
       React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--color-text, #1E1408)', marginBottom: 14 } }, 'Macronutrientes'),
       macros.map(m => React.createElement(MacroBar, { key: m.label, ...m }))

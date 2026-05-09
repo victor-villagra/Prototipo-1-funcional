@@ -21,7 +21,7 @@ const DEFAULT_NOTIF_PREFS = {
 };
 
 // ── Notification generation ───────────────────────────────────────
-function generateAppNotifications(todayMeals, dailyGoals, dailyLog, userData, existing, prefs) {
+function generateAppNotifications(todayMeals, dailyGoals, dailyLog, userData, existing, prefs, todayWaterMl, waterGoalMl) {
   if (!prefs || !prefs.enabled) return [];
   const out = [];
   const now = new Date();
@@ -52,6 +52,36 @@ function generateAppNotifications(todayMeals, dailyGoals, dailyLog, userData, ex
     if (hour >= 19 && hour < 23 && !has('dinner_rem', 4)) {
       const hasDinner = todayMeals.some(m => _normN(m.name).includes('cena'));
       if (!hasDinner) out.push({ type: 'reminder', subtype: 'dinner_rem', title: '¿Ya cenaste? 🌙', message: 'Registra tu cena antes de terminar el día.', action: { screen: 'add', mealName: 'Cena' } });
+    }
+
+    // ── Water reminder ──
+    // Active during waking hours (10–22). Compares actual intake against the
+    // proportional target for the current time of day: by 14h the user should
+    // be at ~50% of goal, by 20h at ~85%. Fires at most once per 3h window.
+    const waterGoal = waterGoalMl || 2000;
+    const waterMl   = todayWaterMl || 0;
+    if (hour >= 10 && hour < 22 && !has('water_rem', 3)) {
+      // Scale 0→1 from 10am to 10pm (12-hour window).
+      const dayProgress = (hour - 10 + now.getMinutes() / 60) / 12;
+      const expected    = waterGoal * Math.min(1, dayProgress);
+      // Trigger if actual is meaningfully below target (>20% behind) and
+      // there's at least 300ml of catch-up worth mentioning.
+      if (expected - waterMl > Math.max(300, waterGoal * 0.2)) {
+        const remaining = Math.max(0, waterGoal - waterMl);
+        out.push({
+          type: 'reminder',
+          subtype: 'water_rem',
+          title: 'Hidrátate 💧',
+          message: `Llevas ${Math.round(waterMl)} de ${waterGoal} ml hoy. Te faltan ${remaining} ml para tu meta.`,
+        });
+      } else if (waterMl >= waterGoal && !has('water_done', 24)) {
+        out.push({
+          type: 'motivation',
+          subtype: 'water_done',
+          title: '¡Meta de agua alcanzada! 💧',
+          message: `Tomaste ${Math.round(waterMl)} ml hoy. Excelente hidratación.`,
+        });
+      }
     }
   }
 

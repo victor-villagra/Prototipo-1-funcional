@@ -144,6 +144,7 @@
 <script src="FoodLibrary.jsx"></script>
 <script src="WeeklyAnalysis.jsx"></script>
 <script src="Notifications.jsx"></script>
+<script src="WaterTracker.jsx"></script>
 
 <script>
 const { useState, useEffect } = React;
@@ -250,14 +251,16 @@ function App() {
   const [editingMealId, setEditingMealId] = useState(null);
   const [notifications, setNotifications] = useState(saved && saved.notifications ? saved.notifications : []);
   const [notifPrefs, setNotifPrefs] = useState(saved && saved.notifPrefs ? saved.notifPrefs : DEFAULT_NOTIF_PREFS);
+  const [waterLog, setWaterLog]   = useState(saved && saved.waterLog  ? saved.waterLog  : []);
+  const [waterGoal, setWaterGoal] = useState(saved && saved.waterGoal ? saved.waterGoal : 2000);
 
   // Persist with debounce to avoid writing on every keystroke
   useEffect(() => {
     const t = setTimeout(() => {
-      saveState({ userData, dailyGoals, dailyLog, foodLibrary, notifications, notifPrefs });
+      saveState({ userData, dailyGoals, dailyLog, foodLibrary, notifications, notifPrefs, waterLog, waterGoal });
     }, 500);
     return () => clearTimeout(t);
-  }, [userData, dailyGoals, dailyLog, foodLibrary, notifications, notifPrefs]);
+  }, [userData, dailyGoals, dailyLog, foodLibrary, notifications, notifPrefs, waterLog, waterGoal]);
 
   function navigate(s, mealName = '') {
     if (s === 'add') {
@@ -337,8 +340,37 @@ function App() {
       setFoodLibrary([]);
       setNotifications([]);
       setNotifPrefs(DEFAULT_NOTIF_PREFS);
+      setWaterLog([]);
+      setWaterGoal(2000);
       setScreen('onboarding');
     }
+  }
+
+  // ── Water tracking helpers ──
+  function handleAddWater(ml) {
+    const now = new Date();
+    setWaterLog(prev => [...prev, {
+      id: Date.now(),
+      date: localDateKey(now),
+      ml,
+      time: now.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' }),
+    }]);
+  }
+  function handleUndoLastWater() {
+    setWaterLog(prev => {
+      const todayKey = localDateKey(new Date());
+      // Remove only the last entry for today, so undoing doesn't reach into
+      // yesterday's history if the user opens the app early in the morning.
+      for (let i = prev.length - 1; i >= 0; i--) {
+        if (prev[i].date === todayKey) {
+          return [...prev.slice(0, i), ...prev.slice(i + 1)];
+        }
+      }
+      return prev;
+    });
+  }
+  function handleUpdateWaterGoal(ml) {
+    setWaterGoal(Math.max(500, Math.min(6000, ml)));
   }
 
   // ── Notification helpers ──
@@ -371,6 +403,8 @@ function App() {
 
   const today = localDateKey(new Date());
   const todayMeals = dailyLog.filter(m => m.date === today);
+  const todayWater = waterLog.filter(w => w.date === today);
+  const todayWaterMl = todayWater.reduce((s, w) => s + (w.ml || 0), 0);
   const unreadCount = notifications.filter(n => !n.read).length;
 
   // Generate notifications on load and periodically.
@@ -381,7 +415,7 @@ function App() {
   const genRef = React.useRef(null);
   genRef.current = () => {
     if (!userData || !notifPrefs || !notifPrefs.enabled) return;
-    const newNotifs = generateAppNotifications(todayMeals, dailyGoals, dailyLog, userData, notifications, notifPrefs);
+    const newNotifs = generateAppNotifications(todayMeals, dailyGoals, dailyLog, userData, notifications, notifPrefs, todayWaterMl, waterGoal);
     if (newNotifs.length > 0) setNotifications(prev => [...newNotifs, ...prev].slice(0, 50));
   };
   useEffect(() => {
@@ -500,6 +534,8 @@ function App() {
           onUpdateUserData: handleUpdateUserData,
           notifPrefs,
           onUpdateNotifPrefs: handleUpdateNotifPrefs,
+          waterGoal,
+          onUpdateWaterGoal: handleUpdateWaterGoal,
         });
 
       default: // dashboard
@@ -511,6 +547,11 @@ function App() {
           unreadCount,
           onDeleteMeal: handleDeleteMeal,
           onEditMeal:   startEditMeal,
+          todayWaterMl,
+          waterGoal,
+          onAddWater:        handleAddWater,
+          onUndoLastWater:   handleUndoLastWater,
+          onUpdateWaterGoal: handleUpdateWaterGoal,
         });
     }
   }

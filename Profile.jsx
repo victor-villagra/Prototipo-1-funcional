@@ -155,8 +155,10 @@ function GoalRow({ goal, onEdit }) {
   );
 }
 
-function EditGoalsSheet({ goals, onClose, onSave }) {
-  const [values, setValues] = React.useState({ ...goals });
+function EditGoalsSheet({ goals, waterGoal, onClose, onSave }) {
+  // values holds macro goals + water; on save we split them back so water
+  // doesn't pollute the dailyGoals shape that Dashboard reads.
+  const [values, setValues] = React.useState({ ...goals, water: waterGoal || 2000 });
 
   return React.createElement('div', {
     style: {
@@ -174,6 +176,7 @@ function EditGoalsSheet({ goals, onClose, onSave }) {
       { key: 'fat',     label: 'Grasa (g)',        color: '#C5A3FF', min: 10,   max: 300,  step: 5  },
       { key: 'carbs',   label: 'Carbohidratos (g)',color: '#FF8C69', min: 20,   max: 800,  step: 5  },
       { key: 'sugar',   label: 'Azúcar (g)',       color: '#FFB3C6', min: 0,    max: 300,  step: 5  },
+      { key: 'water',   label: 'Agua (ml)',        color: '#3A8FB7', min: 500,  max: 6000, step: 100 },
     ].map(f =>
       React.createElement('div', { key: f.key, style: { marginBottom: 12 } },
         React.createElement('div', { style: { fontSize: 13, fontWeight: 600, color: 'var(--color-sub, #5A4838)', marginBottom: 5 } }, f.label),
@@ -205,7 +208,10 @@ function EditGoalsSheet({ goals, onClose, onSave }) {
     React.createElement('div', { style: { display: 'flex', gap: 10, marginTop: 16 } },
       React.createElement('button', { onClick: onClose, style: { flex: 1, padding: '14px', background: 'var(--bg-card, white)', border: '1.5px solid var(--border-color, #EAE0D0)', borderRadius: 999, fontFamily: "'DM Sans',sans-serif", fontSize: 15, fontWeight: 600, color: 'var(--color-sub, #7A6652)', cursor: 'pointer' } }, 'Cancelar'),
       React.createElement('button', {
-        onClick: () => onSave(values),
+        onClick: () => {
+          const { water, ...macros } = values;
+          onSave(macros, water);
+        },
         style: { flex: 2, padding: '14px', background: '#F5D040', border: 'none', borderRadius: 999, fontFamily: "'DM Sans',sans-serif", fontSize: 15, fontWeight: 600, color: '#1E1408', cursor: 'pointer' }
       }, 'Guardar metas')
     )
@@ -323,7 +329,7 @@ function ToggleSwitch({ active, onToggle }) {
   );
 }
 
-function Profile({ userData, dailyGoals, onUpdateGoals, onNavigate, onLogout, onUpdateUserData, notifPrefs, onUpdateNotifPrefs }) {
+function Profile({ userData, dailyGoals, onUpdateGoals, onNavigate, onLogout, onUpdateUserData, notifPrefs, onUpdateNotifPrefs, waterGoal, onUpdateWaterGoal }) {
   const [showEdit, setShowEdit] = React.useState(false);
   const [showEditProfile, setShowEditProfile] = React.useState(false);
   const [showEditActivity, setShowEditActivity] = React.useState(false);
@@ -341,6 +347,7 @@ function Profile({ userData, dailyGoals, onUpdateGoals, onNavigate, onLogout, on
     { label: 'Grasa',    val: goals.fat,      unit: 'g',    color: '#C5A3FF', bg: '#EFE4FF' },
     { label: 'Carbos',   val: goals.carbs,    unit: 'g',    color: '#FF8C69', bg: '#FFE4DB' },
     { label: 'Azúcar',   val: goals.sugar,    unit: 'g',    color: '#FFB3C6', bg: '#FFE8EF' },
+    { label: 'Agua',     val: waterGoal || 2000, unit: 'ml', color: '#3A8FB7', bg: '#DFF3FA' },
   ];
 
   const name         = userData ? (userData.name || 'Usuario')       : 'Usuario';
@@ -506,9 +513,11 @@ function Profile({ userData, dailyGoals, onUpdateGoals, onNavigate, onLogout, on
     }),
     showEdit && React.createElement(EditGoalsSheet, {
       goals,
+      waterGoal,
       onClose: () => setShowEdit(false),
-      onSave: (newGoals) => {
+      onSave: (newGoals, newWaterGoal) => {
         if (onUpdateGoals) onUpdateGoals(newGoals);
+        if (onUpdateWaterGoal && typeof newWaterGoal === 'number') onUpdateWaterGoal(newWaterGoal);
         setShowEdit(false);
       }
     }),
