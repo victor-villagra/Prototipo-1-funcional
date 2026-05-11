@@ -153,22 +153,26 @@ const { useState, useEffect } = React;
 const STORAGE_KEY = 'kcalia_v1';
 const SCHEMA_VERSION = 3;
 
-function _pruneOldLogs(dailyLog) {
-  if (!Array.isArray(dailyLog)) return [];
+function _pruneOldByDate(arr, monthsBack = 6) {
+  if (!Array.isArray(arr)) return [];
   const cutoff = new Date();
-  cutoff.setMonth(cutoff.getMonth() - 6);
-  return dailyLog.filter(m => {
+  cutoff.setMonth(cutoff.getMonth() - monthsBack);
+  return arr.filter(m => {
     try { return new Date(m.date) >= cutoff; } catch { return false; }
   });
 }
 
-// v3: migrate meal.date from Date.toDateString() ("Mon May 09 2026") to a
+function _pruneOldLogs(dailyLog) {
+  return _pruneOldByDate(dailyLog, 6);
+}
+
+// v3: migrate entry.date from Date.toDateString() ("Mon May 09 2026") to a
 // stable "YYYY-MM-DD" local-date key so day comparisons stop drifting with
 // timezone changes. Old entries are converted using new Date() parsing, which
 // handles the toDateString format reliably in all browsers.
-function _migrateDates(dailyLog) {
-  if (!Array.isArray(dailyLog)) return [];
-  return dailyLog.map(m => {
+function _migrateDates(arr) {
+  if (!Array.isArray(arr)) return [];
+  return arr.map(m => {
     if (!m || !m.date) return m;
     if (/^\d{4}-\d{2}-\d{2}$/.test(m.date)) return m;
     const newKey = localDateKey(m.date);
@@ -188,6 +192,10 @@ function loadState() {
       data.dailyLog = _migrateDates(data.dailyLog);
       data.dailyLog = _pruneOldLogs(data.dailyLog);
     }
+    if (data && data.waterLog) {
+      data.waterLog = _migrateDates(data.waterLog);
+      data.waterLog = _pruneOldByDate(data.waterLog, 6);
+    }
     return data;
   } catch { return null; }
 }
@@ -198,7 +206,11 @@ function saveState(state) {
   } catch(e) {
     // localStorage full — prune aggressively and retry
     try {
-      const pruned = { ...state, dailyLog: _pruneOldLogs(state.dailyLog).slice(-90) };
+      const pruned = {
+        ...state,
+        dailyLog: _pruneOldLogs(state.dailyLog).slice(-90),
+        waterLog: _pruneOldByDate(state.waterLog, 3).slice(-200),
+      };
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ _v: SCHEMA_VERSION, data: pruned }));
     } catch {}
   }
@@ -392,14 +404,14 @@ function App() {
 
   // Re-render at local midnight so "today" rolls over without leaving stale
   // meals visible. Keeps a tick state that bumps each new day.
-  const [, setDayTick] = useState(0);
+  const [dayTick, setDayTick] = useState(0);
   useEffect(() => {
     const now = new Date();
     const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 1);
     const ms = nextMidnight - now;
     const t = setTimeout(() => setDayTick(n => n + 1), ms);
     return () => clearTimeout(t);
-  });
+  }, [dayTick]);
 
   const today = localDateKey(new Date());
   const todayMeals = dailyLog.filter(m => m.date === today);

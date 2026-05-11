@@ -44,13 +44,19 @@ function generateAppNotifications(todayMeals, dailyGoals, dailyLog, userData, ex
     if (hour >= 7 && hour < 11 && todayMeals.length === 0 && !has('breakfast_rem', 4)) {
       out.push({ type: 'reminder', subtype: 'breakfast_rem', title: '¿Ya desayunaste? 🍳', message: 'Registra tu desayuno para mantener el seguimiento al día.', action: { screen: 'add', mealName: 'Desayuno' } });
     }
-    const _normN = (typeof normalizeText === 'function') ? normalizeText : (s => (s || '').toLowerCase());
+    // Detect meals by the hour they were logged (meal.id is Date.now() at save time)
+    // rather than by name. Users can rename meals freely ("Lunch", "Almuerzo tarde",
+    // "Comida 1"), so name matching missed legitimate entries and double-spammed reminders.
+    const _mealHour = (m) => {
+      const t = typeof m.id === 'number' ? m.id : Date.parse(m.id);
+      return isNaN(t) ? -1 : new Date(t).getHours();
+    };
     if (hour >= 12 && hour < 15 && !has('lunch_rem', 3)) {
-      const hasLunch = todayMeals.some(m => _normN(m.name).includes('almuerzo'));
+      const hasLunch = todayMeals.some(m => { const h = _mealHour(m); return h >= 12 && h < 16; });
       if (!hasLunch) out.push({ type: 'reminder', subtype: 'lunch_rem', title: 'Hora del almuerzo 🍽️', message: 'No olvides registrar tu almuerzo para no perder el seguimiento.', action: { screen: 'add', mealName: 'Almuerzo' } });
     }
     if (hour >= 19 && hour < 23 && !has('dinner_rem', 4)) {
-      const hasDinner = todayMeals.some(m => _normN(m.name).includes('cena'));
+      const hasDinner = todayMeals.some(m => { const h = _mealHour(m); return h >= 19 && h < 24; });
       if (!hasDinner) out.push({ type: 'reminder', subtype: 'dinner_rem', title: '¿Ya cenaste? 🌙', message: 'Registra tu cena antes de terminar el día.', action: { screen: 'add', mealName: 'Cena' } });
     }
 
@@ -142,8 +148,13 @@ function generateAppNotifications(todayMeals, dailyGoals, dailyLog, userData, ex
     }
   }
 
-  let _idBase = Date.now();
-  return out.map(n => ({ ...n, id: String(++_idBase) + '_' + n.subtype, read: false, timestamp: now.toISOString() }));
+  const _idBase = Date.now();
+  return out.map((n, i) => ({
+    ...n,
+    id: `${_idBase}_${i}_${n.subtype}_${Math.random().toString(36).slice(2, 8)}`,
+    read: false,
+    timestamp: now.toISOString(),
+  }));
 }
 
 // ── Notification Center ───────────────────────────────────────────

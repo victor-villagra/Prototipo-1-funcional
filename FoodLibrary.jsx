@@ -282,7 +282,7 @@ function AddFoodSheet({ onClose, onSave, editFood }) {
       setForm(f => ({ ...f, kcal: String(found.k), protein: String(found.p), fat: String(found.f), carbs: String(found.c), sugar: String(found.s), unit: found.u }));
       setAiDone(true);
     } else {
-      setAiError('No encontramos ese alimento. Intenta con otro nombre o introdúcelo manualmente.');
+      setAiError('No encontramos ese alimento en la base local. Intenta con otro nombre o introdúcelo manualmente.');
     }
     setAiLoading(false);
   }
@@ -344,7 +344,7 @@ function AddFoodSheet({ onClose, onSave, editFood }) {
         opacity: !form.name ? 0.5 : 1,
       }
     },
-      aiLoading ? '⏳ Consultando IA...' : aiDone ? '✓ Información completada' : '✨ Rellenar con IA'
+      aiLoading ? '⏳ Buscando...' : aiDone ? '✓ Datos completados' : '🔍 Autocompletar desde la base'
     ),
     aiError && React.createElement('div', { style: { fontSize: 12, color: '#C03030', marginBottom: 12, padding: '6px 10px', background: '#FFE0E0', borderRadius: 8 } }, aiError),
     React.createElement('div', { style: { marginBottom: 4 } },

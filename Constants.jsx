@@ -116,11 +116,14 @@ function defaultMealNameForHour(hour) {
 }
 
 // Computes BMR, TDEE, and a personalized calorie target.
-// Adjustment scales with weight so a 120kg user loses faster than a 60kg one.
-function computeNutritionTargets({ weight, height, age, sex, activity, goal }) {
+// Adjustment scales with body size AND with the gap to target weight, so a user
+// who wants to lose 20 kg gets a larger (but capped) deficit than one losing 2 kg.
+function computeNutritionTargets({ weight, height, age, sex, activity, goal, targetWeight }) {
   const w = parseFloat(weight) || 70;
   const h = parseFloat(height) || 170;
   const a = parseFloat(age)    || 25;
+  const tw = parseFloat(targetWeight);
+  const gap = !isNaN(tw) ? (w - tw) : 0; // >0 = wants to lose, <0 = wants to gain
 
   // Harris-Benedict has only male/female formulas. For "Otro" or unspecified,
   // average the two so the user isn't silently treated as male (which would
@@ -132,12 +135,21 @@ function computeNutritionTargets({ weight, height, age, sex, activity, goal }) {
             : (bmrMale + bmrFemale) / 2;
   const tdee = Math.round(bmr * (ACTIVITY_MULTIPLIERS[activity] || 1.55));
 
-  // Scale adjustment by % of TDEE so it's proportional to body size and metabolism.
-  // Clamp so adjustments stay in physiologically safe ranges.
+  // Scale adjustment by % of TDEE so it's proportional to body size and metabolism,
+  // then nudge the % up/down based on how far the user is from their target weight.
+  // Clamp ranges keep the deficit/surplus in physiologically safe territory.
   let adjustment = 0;
-  if (goal === 'lose_fat')    adjustment = -Math.max(300, Math.min(700, Math.round(tdee * 0.18)));
-  if (goal === 'gain_muscle') adjustment =  Math.max(200, Math.min(500, Math.round(tdee * 0.12)));
-  if (goal === 'performance') adjustment =  Math.max(100, Math.min(300, Math.round(tdee * 0.07)));
+  if (goal === 'lose_fat') {
+    // gap of 0 → 14% (mild), 10 kg → 19%, 20+ kg → cap 22%
+    const pct = Math.max(0.12, Math.min(0.22, 0.14 + Math.max(0, gap) * 0.005));
+    adjustment = -Math.max(300, Math.min(800, Math.round(tdee * pct)));
+  }
+  if (goal === 'gain_muscle') {
+    // gap of 0 → 10% (lean bulk), -5 kg (gain 5) → 12.5%, -10+ → cap 15%
+    const pct = Math.max(0.08, Math.min(0.15, 0.10 + Math.max(0, -gap) * 0.005));
+    adjustment = Math.max(200, Math.min(550, Math.round(tdee * pct)));
+  }
+  if (goal === 'performance') adjustment = Math.max(100, Math.min(300, Math.round(tdee * 0.07)));
 
   const targetKcal = Math.max(1200, tdee + adjustment);
   const proteinPerKg = goal === 'gain_muscle' ? 2.0 : goal === 'lose_fat' ? 1.8 : 1.6;

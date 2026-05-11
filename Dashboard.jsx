@@ -240,7 +240,7 @@ function Dashboard({ onNavigate, userData, todayMeals, dailyGoals, unreadCount, 
     { label: 'Azúcar',   val: totals.sugar,   goal: goals.sugar,   color: '#FFB3C6', unit: 'g' },
   ];
 
-  const userName = userData ? userData.name : 'Víctor';
+  const userName = userData ? userData.name : '';
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches';
 

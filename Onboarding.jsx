@@ -300,15 +300,15 @@ function PersonalGoalStep({ data, setData, onNext, onBack }) {
   const charCount = (data.personalGoal || '').length;
 
   return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', height: '100%' } },
-    React.createElement(StepHeader, { step: 5, total: 7, title: 'Describe tu meta ✨', sub: 'Opcional — Cuéntanos con tus propias palabras qué quieres lograr. Esto será analizado por IA para darte una experiencia más personalizada.', onBack }),
+    React.createElement(StepHeader, { step: 5, total: 7, title: 'Describe tu meta', sub: 'Opcional — Cuéntanos con tus propias palabras qué quieres lograr. Lo verás en tu perfil como recordatorio de tu motivación.', onBack }),
     React.createElement('div', { style: { flex: 1, overflowY: 'auto', padding: '0 24px' } },
 
-      // Decorative AI badge
-      React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18, padding: '10px 14px', background: 'linear-gradient(135deg, #EFE4FF 0%, #DFF3FA 100%)', borderRadius: 14, border: '1.5px solid #C5A3FF' } },
-        React.createElement('div', { style: { width: 36, height: 36, borderRadius: 12, background: 'linear-gradient(135deg, #C5A3FF 0%, #7EC8E3 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 } }, '🤖'),
+      // Decorative motivation badge
+      React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18, padding: '10px 14px', background: 'linear-gradient(135deg, #FFF3C4 0%, #FFE4DB 100%)', borderRadius: 14, border: '1.5px solid #F5D040' } },
+        React.createElement('div', { style: { width: 36, height: 36, borderRadius: 12, background: 'linear-gradient(135deg, #F5D040 0%, #FFAB5E 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 } }, '🎯'),
         React.createElement('div', null,
-          React.createElement('div', { style: { fontSize: 13, fontWeight: 700, color: '#5A4838' } }, 'Personalización con IA'),
-          React.createElement('div', { style: { fontSize: 11, color: '#7A6652', marginTop: 1, lineHeight: 1.4 } }, 'Tu descripción nos ayudará a entender mejor tus necesidades y adaptar recomendaciones.')
+          React.createElement('div', { style: { fontSize: 13, fontWeight: 700, color: '#5A4838' } }, 'Tu motivación personal'),
+          React.createElement('div', { style: { fontSize: 11, color: '#7A6652', marginTop: 1, lineHeight: 1.4 } }, 'Anota qué te impulsa a mejorar. Verlo cada día te ayudará a mantener el rumbo.')
         )
       ),
 
@@ -330,7 +330,7 @@ function PersonalGoalStep({ data, setData, onNext, onBack }) {
             outline: 'none', resize: 'none', lineHeight: 1.6,
             transition: 'border-color 0.2s',
           },
-          onFocus: e => e.target.style.borderColor = '#C5A3FF',
+          onFocus: e => e.target.style.borderColor = '#F5D040',
           onBlur: e => e.target.style.borderColor = '#EAE0D0',
         }),
         React.createElement('div', {
@@ -399,15 +399,15 @@ function PersonalGoalStep({ data, setData, onNext, onBack }) {
         disabled: !data.personalGoal || data.personalGoal.trim().length === 0,
         style: {
           flex: 2,
-          background: (!data.personalGoal || data.personalGoal.trim().length === 0) ? '#EAE0D0' : 'linear-gradient(135deg, #C5A3FF 0%, #7EC8E3 100%)',
+          background: (!data.personalGoal || data.personalGoal.trim().length === 0) ? '#EAE0D0' : '#F5D040',
           border: 'none', borderRadius: 999, padding: 16,
           fontFamily: "'DM Sans',sans-serif", fontSize: 15, fontWeight: 600,
-          color: (!data.personalGoal || data.personalGoal.trim().length === 0) ? '#B8A898' : 'white',
+          color: (!data.personalGoal || data.personalGoal.trim().length === 0) ? '#B8A898' : '#1E1408',
           cursor: (!data.personalGoal || data.personalGoal.trim().length === 0) ? 'not-allowed' : 'pointer',
-          boxShadow: (!data.personalGoal || data.personalGoal.trim().length === 0) ? 'none' : '0 2px 12px rgba(197,163,255,0.35)',
+          boxShadow: (!data.personalGoal || data.personalGoal.trim().length === 0) ? 'none' : '0 2px 12px rgba(245,208,64,0.35)',
           transition: 'all 0.2s',
         }
-      }, 'Continuar con IA ✨')
+      }, 'Continuar')
     )
   );
 }
@@ -418,6 +418,7 @@ function SummaryStep({ data, onFinish, onBack }) {
   const { bmr, tdee, targetKcal, suggestedGoals } = computeNutritionTargets({
     weight: data.weight, height: data.height, age: data.age,
     sex: data.sex, activity: data.activity, goal: data.goal,
+    targetWeight: data.targetWeight,
   });
 
   return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', height: '100%' } },
