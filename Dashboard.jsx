@@ -220,7 +220,100 @@ function MealDetailSheet({ meal, onClose, onDelete, onEdit }) {
   );
 }
 
-function Dashboard({ onNavigate, userData, todayMeals, dailyGoals, unreadCount, onDeleteMeal, onEditMeal, todayWaterMl = 0, waterGoal = 2000, onAddWater, onUndoLastWater, onUpdateWaterGoal }) {
+function _getWeekStartKey() {
+  const d = new Date();
+  const day = d.getDay();
+  d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
+  d.setHours(0, 0, 0, 0);
+  return (typeof localDateKey === 'function') ? localDateKey(d) : d.toISOString().slice(0, 10);
+}
+
+function ConsumptionTracker({ limits, log, onAdd, onUndo }) {
+  if (!limits || limits.length === 0) return null;
+  const todayKey    = (typeof localDateKey === 'function') ? localDateKey(new Date()) : new Date().toISOString().slice(0, 10);
+  const weekStart   = _getWeekStartKey();
+
+  return React.createElement('div', { style: { margin: '14px 16px 0' } },
+    limits.map(limit => {
+      const entries = (log || []).filter(e => e.limitId === limit.id);
+      const current = entries.filter(e =>
+        limit.period === 'weekly' ? (e.date >= weekStart && e.date <= todayKey) : e.date === todayKey
+      ).length;
+      const over  = current >= limit.limit;
+      const pct   = Math.min((current / Math.max(limit.limit, 1)) * 100, 100);
+      const color = over ? '#FF6B6B' : '#F5C030';
+      const bg    = over ? 'var(--accent-danger-soft, #FFE0E0)' : 'var(--accent-gold-soft, #FFF3C4)';
+      const periodLabel = limit.period === 'weekly' ? 'semanal' : 'diario';
+
+      return React.createElement('div', {
+        key: limit.id,
+        style: {
+          background: 'var(--bg-card, white)', borderRadius: 20,
+          padding: '14px 16px', boxShadow: '0 2px 12px rgba(30,20,8,0.07)', marginBottom: 10,
+        }
+      },
+        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 12 } },
+          React.createElement('div', {
+            style: {
+              width: 38, height: 38, borderRadius: 12, background: bg,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0, fontSize: 20,
+            }
+          }, limit.icon || '⚡'),
+          React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+            React.createElement('div', { style: { display: 'flex', alignItems: 'baseline', gap: 6 } },
+              React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 15, fontWeight: 700, color: 'var(--color-text, #1E1408)' } }, limit.name),
+              React.createElement('div', { style: { fontSize: 11, color: 'var(--color-muted, #9A8878)', fontWeight: 500 } },
+                `${current} / ${limit.limit} ${periodLabel}`
+              ),
+              over && React.createElement('span', {
+                style: { fontSize: 10, fontWeight: 700, color: 'var(--accent-danger-text, #C03030)', background: 'var(--accent-danger-soft, #FFE0E0)', padding: '1px 7px', borderRadius: 999 }
+              }, '¡LÍMITE!')
+            ),
+            React.createElement('div', {
+              style: { background: 'var(--border-color, #EAE0D0)', borderRadius: 999, height: 6, overflow: 'hidden', marginTop: 5 }
+            },
+              React.createElement('div', {
+                style: { background: color, width: `${pct}%`, height: '100%', borderRadius: 999, transition: 'width 0.5s ease-out' }
+              })
+            )
+          ),
+          React.createElement('button', {
+            onClick: () => onAdd && onAdd(limit.id),
+            'aria-label': `Registrar ${limit.name}`,
+            type: 'button',
+            style: {
+              width: 44, height: 44, borderRadius: 999,
+              background: over ? '#FF6B6B' : '#F5D040',
+              border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', flexShrink: 0,
+              boxShadow: `0 2px 8px ${over ? 'rgba(255,107,107,0.35)' : 'rgba(245,208,64,0.4)'}`,
+              padding: 0,
+            }
+          },
+            React.createElement('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: over ? 'white' : '#1E1408', strokeWidth: 2.5, strokeLinecap: 'round' },
+              React.createElement('line', { x1: 12, y1: 5, x2: 12, y2: 19 }),
+              React.createElement('line', { x1: 5, y1: 12, x2: 19, y2: 12 })
+            )
+          ),
+          current > 0 && React.createElement('button', {
+            onClick: () => onUndo && onUndo(limit.id),
+            'aria-label': `Deshacer último ${limit.name}`,
+            type: 'button',
+            style: {
+              width: 32, height: 44, background: 'transparent', border: 'none',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', padding: 0, flexShrink: 0,
+              fontSize: 16, color: 'var(--color-muted, #9A8878)',
+            }
+          }, '↶')
+        )
+      );
+    })
+  );
+}
+
+function Dashboard({ onNavigate, userData, todayMeals, dailyGoals, unreadCount, onDeleteMeal, onEditMeal, todayWaterMl = 0, waterGoal = 2000, onAddWater, onUndoLastWater, onUpdateWaterGoal, waterPresets, onUpdateWaterPresets, consumptionLimits, consumptionLog, onAddConsumption, onUndoConsumption }) {
   const goals = dailyGoals || { kcal: 2000, protein: 80, fat: 70, carbs: 300, sugar: 50 };
   const [selectedMeal, setSelectedMeal] = React.useState(null);
 
@@ -279,6 +372,14 @@ function Dashboard({ onNavigate, userData, todayMeals, dailyGoals, unreadCount, 
       onAdd: onAddWater,
       onUndo: onUndoLastWater,
       onEditGoal: onUpdateWaterGoal,
+      presets: waterPresets,
+      onUpdatePresets: onUpdateWaterPresets,
+    }),
+    React.createElement(ConsumptionTracker, {
+      limits: consumptionLimits,
+      log: consumptionLog,
+      onAdd: onAddConsumption,
+      onUndo: onUndoConsumption,
     }),
     React.createElement('div', { style: { margin: '14px 16px 0', background: 'var(--bg-card, white)', borderRadius: 20, padding: '16px 18px', boxShadow: '0 2px 12px rgba(30,20,8,0.07)' } },
       React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--color-text, #1E1408)', marginBottom: 14 } }, 'Macronutrientes'),

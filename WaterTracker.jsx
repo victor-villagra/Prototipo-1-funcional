@@ -5,14 +5,12 @@
 const WATER_BLUE      = '#3A8FB7';
 const WATER_BLUE_SOFT = 'var(--accent-protein-soft, #DFF3FA)';
 
-// Quick-add presets cover the common containers people drink from. The custom
-// stepper in the expanded view handles any other amount in 50 ml increments.
-const WATER_PRESETS = [
-  { label: 'Vaso',     ml: 250, icon: '🥤' },
-  { label: 'Botella',  ml: 500, icon: '🍶' },
-  { label: 'Taza',     ml: 200, icon: '☕' },
-  { label: 'Lata',     ml: 330, icon: '🥫' },
-  { label: 'Botellón', ml: 750, icon: '🧴' },
+const WATER_PRESETS_DEFAULT = [
+  { label: 'Vaso',     ml: 250,  icon: '🥤' },
+  { label: 'Botella',  ml: 500,  icon: '🍶' },
+  { label: 'Taza',     ml: 200,  icon: '☕' },
+  { label: 'Lata',     ml: 330,  icon: '🥫' },
+  { label: 'Botellón', ml: 750,  icon: '🧴' },
   { label: 'Litro',    ml: 1000, icon: '💧' },
 ];
 
@@ -21,8 +19,6 @@ const WATER_MAX_ML = 3000;
 const WATER_STEP   = 50;
 
 function _fmtL(ml) {
-  // Below 1000 ml show "750 ml"; above, show "1.5 L" with one decimal so the
-  // ring/headline stay compact instead of "1500 ml".
   if (ml < 1000) return `${Math.round(ml)} ml`;
   const l = ml / 1000;
   return `${l.toFixed(l >= 10 ? 0 : 1)} L`;
@@ -36,9 +32,6 @@ function WaterDropIcon({ size = 20, fill = WATER_BLUE }) {
   );
 }
 
-// Visual row of glass icons. Each glass represents `goal / count` ml. Filled
-// glasses reflect actual intake; the partially-filled glass shows fractional
-// progress so the user can see "almost done with the 5th glass".
 function GlassesRow({ consumed, goal, count = 8 }) {
   const perGlass = goal / count;
   return React.createElement('div', {
@@ -68,17 +61,23 @@ function GlassesRow({ consumed, goal, count = 8 }) {
   );
 }
 
-function WaterTracker({ consumed, goal, onAdd, onUndo, onEditGoal }) {
-  const [expanded, setExpanded] = React.useState(false);
-  const [editingGoal, setEditingGoal] = React.useState(false);
-  const [goalDraft, setGoalDraft] = React.useState(String(goal));
-  // Custom-amount input. Defaults to 250 (a typical glass) so the user can
-  // bump it up/down with the stepper instead of typing every time.
-  const [customMl, setCustomMl] = React.useState(250);
-  const [customDraft, setCustomDraft] = React.useState('250');
-  const safeGoal = goal && goal > 0 ? goal : 2000;
-  const pct = Math.min((consumed / safeGoal) * 100, 100);
+function WaterTracker({ consumed, goal, onAdd, onUndo, onEditGoal, presets, onUpdatePresets }) {
+  const activePresets = (presets && presets.length > 0) ? presets : WATER_PRESETS_DEFAULT;
+
+  const [expanded,       setExpanded]       = React.useState(false);
+  const [editingGoal,    setEditingGoal]    = React.useState(false);
+  const [goalDraft,      setGoalDraft]      = React.useState(String(goal));
+  const [customMl,       setCustomMl]       = React.useState(250);
+  const [customDraft,    setCustomDraft]    = React.useState('250');
+  const [editingPresets, setEditingPresets] = React.useState(false);
+  const [newIcon,        setNewIcon]        = React.useState('💧');
+  const [newLabel,       setNewLabel]       = React.useState('');
+  const [newMlDraft,     setNewMlDraft]     = React.useState('');
+
+  const safeGoal    = goal && goal > 0 ? goal : 2000;
+  const pct         = Math.min((consumed / safeGoal) * 100, 100);
   const reachedGoal = consumed >= safeGoal;
+  const quickMl     = activePresets[0] ? activePresets[0].ml : 250;
 
   React.useEffect(() => { setGoalDraft(String(goal)); }, [goal]);
 
@@ -102,6 +101,22 @@ function WaterTracker({ consumed, goal, onAdd, onUndo, onEditGoal }) {
   }
   function addCustom() {
     if (customMl > 0 && onAdd) onAdd(customMl);
+  }
+
+  function deletePreset(idx) {
+    if (!onUpdatePresets) return;
+    const next = activePresets.filter((_, i) => i !== idx);
+    onUpdatePresets(next.length > 0 ? next : WATER_PRESETS_DEFAULT);
+  }
+
+  function addNewPreset() {
+    const ml = parseInt(newMlDraft, 10);
+    if (!newLabel.trim() || isNaN(ml) || ml < WATER_MIN_ML || ml > WATER_MAX_ML) return;
+    const next = [...activePresets, { label: newLabel.trim().slice(0, 16), ml, icon: newIcon || '💧' }];
+    if (onUpdatePresets) onUpdatePresets(next);
+    setNewIcon('💧');
+    setNewLabel('');
+    setNewMlDraft('');
   }
 
   return React.createElement('div', {
@@ -139,10 +154,9 @@ function WaterTracker({ consumed, goal, onAdd, onUndo, onEditGoal }) {
           })
         )
       ),
-      // Quick "+250" button — biggest single-tap action
       React.createElement('button', {
-        onClick: () => onAdd && onAdd(250),
-        'aria-label': 'Añadir 250 mililitros de agua',
+        onClick: () => onAdd && onAdd(quickMl),
+        'aria-label': `Añadir ${quickMl} mililitros de agua`,
         type: 'button',
         style: {
           width: 44, height: 44, borderRadius: 999, background: WATER_BLUE, border: 'none',
@@ -157,7 +171,7 @@ function WaterTracker({ consumed, goal, onAdd, onUndo, onEditGoal }) {
         )
       ),
       React.createElement('button', {
-        onClick: () => setExpanded(e => !e),
+        onClick: () => { setExpanded(e => !e); setEditingPresets(false); },
         'aria-label': expanded ? 'Colapsar agua' : 'Expandir agua',
         'aria-expanded': expanded,
         type: 'button',
@@ -181,10 +195,9 @@ function WaterTracker({ consumed, goal, onAdd, onUndo, onEditGoal }) {
     expanded && React.createElement('div', {
       style: { marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border-color, #F5EFE4)' }
     },
-      // 8-glass row
       React.createElement(GlassesRow, { consumed, goal: safeGoal, count: 8 }),
 
-      // ── Custom amount: stepper + numeric input + add button ──
+      // Custom amount stepper
       React.createElement('div', {
         style: { marginTop: 14, padding: '10px 12px', background: WATER_BLUE_SOFT, borderRadius: 14 }
       },
@@ -256,31 +269,118 @@ function WaterTracker({ consumed, goal, onAdd, onUndo, onEditGoal }) {
         )
       ),
 
-      // Preset chips
-      React.createElement('div', { style: { fontSize: 11, fontWeight: 600, color: 'var(--color-muted, #9A8878)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 14, marginBottom: 6 } }, 'Atajos'),
+      // ── Atajos (presets) with edit toggle ──
+      React.createElement('div', {
+        style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 14, marginBottom: 6 }
+      },
+        React.createElement('div', { style: { fontSize: 11, fontWeight: 600, color: 'var(--color-muted, #9A8878)', textTransform: 'uppercase', letterSpacing: '0.06em' } }, 'Atajos'),
+        React.createElement('button', {
+          onClick: () => setEditingPresets(e => !e),
+          type: 'button',
+          style: { background: 'transparent', border: 'none', fontSize: 11, fontWeight: 700, color: WATER_BLUE, cursor: 'pointer', padding: '4px 0', font: 'inherit' }
+        }, editingPresets ? 'Listo' : 'Editar')
+      ),
+
       React.createElement('div', {
         style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }
       },
-        WATER_PRESETS.map(p =>
-          React.createElement('button', {
-            key: p.label,
-            onClick: () => onAdd && onAdd(p.ml),
-            'aria-label': `Añadir ${p.label}, ${p.ml} mililitros`,
-            type: 'button',
-            style: {
-              padding: '10px 6px', borderRadius: 12,
-              background: WATER_BLUE_SOFT, border: '1.5px solid transparent',
-              cursor: 'pointer', display: 'flex', flexDirection: 'column',
-              alignItems: 'center', gap: 2, font: 'inherit',
-              minHeight: 56,
-            }
+        activePresets.map((p, idx) =>
+          React.createElement('div', {
+            key: idx,
+            style: { position: 'relative' }
           },
-            React.createElement('span', { style: { fontSize: 18 } }, p.icon),
-            React.createElement('span', { style: { fontSize: 11, fontWeight: 700, color: WATER_BLUE } }, p.label),
-            React.createElement('span', { style: { fontSize: 10, color: 'var(--color-muted, #9A8878)' } }, `${p.ml} ml`)
+            React.createElement('button', {
+              onClick: () => !editingPresets && onAdd && onAdd(p.ml),
+              'aria-label': editingPresets ? `Eliminar ${p.label}` : `Añadir ${p.label}, ${p.ml} mililitros`,
+              type: 'button',
+              style: {
+                width: '100%',
+                padding: '10px 6px', borderRadius: 12,
+                background: WATER_BLUE_SOFT, border: `1.5px solid ${editingPresets ? '#FF6B6B44' : 'transparent'}`,
+                cursor: 'pointer', display: 'flex', flexDirection: 'column',
+                alignItems: 'center', gap: 2, font: 'inherit',
+                minHeight: 56,
+                opacity: editingPresets ? 0.75 : 1,
+              }
+            },
+              React.createElement('span', { style: { fontSize: 18 } }, p.icon),
+              React.createElement('span', { style: { fontSize: 11, fontWeight: 700, color: WATER_BLUE } }, p.label),
+              React.createElement('span', { style: { fontSize: 10, color: 'var(--color-muted, #9A8878)' } }, `${p.ml} ml`)
+            ),
+            editingPresets && React.createElement('button', {
+              onClick: () => deletePreset(idx),
+              'aria-label': `Eliminar atajo ${p.label}`,
+              type: 'button',
+              style: {
+                position: 'absolute', top: -6, right: -6,
+                width: 20, height: 20, borderRadius: 999,
+                background: '#FF6B6B', border: '2px solid var(--bg-card, white)',
+                color: 'white', fontSize: 12, fontWeight: 900,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', padding: 0, lineHeight: 1,
+              }
+            }, '×')
           )
         )
       ),
+
+      // Add new preset form (only in edit mode)
+      editingPresets && React.createElement('div', {
+        style: { marginTop: 10, padding: '10px 12px', background: 'var(--bg-card2, #F5EFE4)', borderRadius: 12 }
+      },
+        React.createElement('div', { style: { fontSize: 11, fontWeight: 700, color: 'var(--color-sub, #7A6652)', marginBottom: 8 } }, 'Nuevo atajo'),
+        React.createElement('div', { style: { display: 'flex', gap: 6, alignItems: 'center' } },
+          React.createElement('input', {
+            type: 'text',
+            value: newIcon,
+            onChange: e => setNewIcon(e.target.value.slice(0, 2)),
+            placeholder: '💧',
+            'aria-label': 'Emoji del atajo',
+            style: {
+              width: 44, textAlign: 'center', padding: '8px 4px', borderRadius: 8,
+              border: '1.5px solid var(--border-color, #EAE0D0)', background: 'var(--bg-card, white)',
+              fontSize: 18, outline: 'none',
+            }
+          }),
+          React.createElement('input', {
+            type: 'text',
+            value: newLabel,
+            onChange: e => setNewLabel(e.target.value.slice(0, 16)),
+            placeholder: 'Nombre',
+            'aria-label': 'Nombre del atajo',
+            style: {
+              flex: 1, padding: '8px 10px', borderRadius: 8,
+              border: '1.5px solid var(--border-color, #EAE0D0)', background: 'var(--bg-card, white)',
+              fontSize: 13, fontFamily: "'DM Sans',sans-serif", color: 'var(--color-text, #1E1408)', outline: 'none',
+            }
+          }),
+          React.createElement('input', {
+            type: 'number', inputMode: 'numeric',
+            value: newMlDraft,
+            onChange: e => setNewMlDraft(e.target.value),
+            placeholder: 'ml',
+            'aria-label': 'Cantidad en mililitros',
+            min: WATER_MIN_ML, max: WATER_MAX_ML,
+            style: {
+              width: 56, padding: '8px 6px', borderRadius: 8, textAlign: 'center',
+              border: '1.5px solid var(--border-color, #EAE0D0)', background: 'var(--bg-card, white)',
+              fontSize: 13, fontFamily: "'Nunito',sans-serif", color: 'var(--color-text, #1E1408)', outline: 'none',
+            }
+          }),
+          React.createElement('button', {
+            onClick: addNewPreset,
+            type: 'button',
+            'aria-label': 'Agregar atajo',
+            style: {
+              width: 36, height: 36, borderRadius: 999, border: 'none',
+              background: WATER_BLUE, color: 'white', fontSize: 20, fontWeight: 700,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', flexShrink: 0, padding: 0,
+            }
+          }, '+')
+        )
+      ),
+
       // Goal editor + undo row
       React.createElement('div', {
         style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, gap: 8 }
@@ -331,4 +431,4 @@ function WaterTracker({ consumed, goal, onAdd, onUndo, onEditGoal }) {
   );
 }
 
-Object.assign(window, { WaterTracker });
+Object.assign(window, { WaterTracker, WATER_PRESETS_DEFAULT });

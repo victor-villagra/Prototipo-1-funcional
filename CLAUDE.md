@@ -2,6 +2,13 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Workflow After Code Changes
+
+After every code modification, briefly explain what was changed (2-3 lines max). Then always ask:
+"¿Quieres que haga el push a GitHub?"
+- If the user says yes → run `git add`, `git commit`, and `git push`.
+- If the user says no → stop there.
+
 ## Project Overview
 
 KCALIA is a mobile-first nutritional tracking web app built in React 18 (UMD via CDN). It runs directly in the browser — no build system, no npm, no compilation step.

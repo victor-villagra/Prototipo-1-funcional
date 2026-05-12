@@ -281,6 +281,9 @@ function App() {
   const [notifPrefs, setNotifPrefs] = useState(saved && saved.notifPrefs ? saved.notifPrefs : DEFAULT_NOTIF_PREFS);
   const [waterLog, setWaterLog]   = useState(saved && saved.waterLog  ? saved.waterLog  : []);
   const [waterGoal, setWaterGoal] = useState(saved && saved.waterGoal ? saved.waterGoal : 2000);
+  const [waterPresets, setWaterPresets] = useState(saved && saved.waterPresets ? saved.waterPresets : null);
+  const [consumptionLimits, setConsumptionLimits] = useState(saved && saved.consumptionLimits ? saved.consumptionLimits : []);
+  const [consumptionLog,    setConsumptionLog]    = useState(saved && saved.consumptionLog    ? saved.consumptionLog    : []);
   const [darkTheme, setDarkTheme] = useState(() => {
     if (saved && typeof saved.darkTheme === 'boolean') return saved.darkTheme;
     // One-time migration from the legacy standalone key, then remove it.
@@ -313,10 +316,10 @@ function App() {
   // Persist with debounce to avoid writing on every keystroke
   useEffect(() => {
     const t = setTimeout(() => {
-      saveState({ userData, dailyGoals, dailyLog, foodLibrary, notifications, notifPrefs, waterLog, waterGoal, darkTheme });
+      saveState({ userData, dailyGoals, dailyLog, foodLibrary, notifications, notifPrefs, waterLog, waterGoal, waterPresets, consumptionLimits, consumptionLog, darkTheme });
     }, 500);
     return () => clearTimeout(t);
-  }, [userData, dailyGoals, dailyLog, foodLibrary, notifications, notifPrefs, waterLog, waterGoal, darkTheme]);
+  }, [userData, dailyGoals, dailyLog, foodLibrary, notifications, notifPrefs, waterLog, waterGoal, waterPresets, consumptionLimits, consumptionLog, darkTheme]);
 
   function navigate(s, mealName = '') {
     if (s === 'add') {
@@ -399,6 +402,9 @@ function App() {
     setNotifPrefs(DEFAULT_NOTIF_PREFS);
     setWaterLog([]);
     setWaterGoal(2000);
+    setWaterPresets(null);
+    setConsumptionLimits([]);
+    setConsumptionLog([]);
     setDarkTheme(false);
     setScreen('onboarding');
   }
@@ -428,6 +434,25 @@ function App() {
   }
   function handleUpdateWaterGoal(ml) {
     setWaterGoal(Math.max(500, Math.min(6000, ml)));
+  }
+  function handleUpdateWaterPresets(newPresets) {
+    setWaterPresets(newPresets);
+  }
+  function handleUpdateConsumptionLimits(newLimits) {
+    setConsumptionLimits(newLimits);
+    const ids = new Set(newLimits.map(l => l.id));
+    setConsumptionLog(prev => prev.filter(e => ids.has(e.limitId)));
+  }
+  function handleAddConsumption(limitId) {
+    setConsumptionLog(prev => [...prev, { id: uniqueId(), limitId, date: localDateKey(new Date()) }]);
+  }
+  function handleUndoConsumption(limitId) {
+    setConsumptionLog(prev => {
+      for (let i = prev.length - 1; i >= 0; i--) {
+        if (prev[i].limitId === limitId) return [...prev.slice(0, i), ...prev.slice(i + 1)];
+      }
+      return prev;
+    });
   }
 
   // ── Notification helpers ──
@@ -604,6 +629,8 @@ function App() {
           onUpdateWaterGoal: handleUpdateWaterGoal,
           darkTheme,
           onUpdateDarkTheme: setDarkTheme,
+          consumptionLimits,
+          onUpdateConsumptionLimits: handleUpdateConsumptionLimits,
         });
 
       default: // dashboard
@@ -620,6 +647,12 @@ function App() {
           onAddWater:        handleAddWater,
           onUndoLastWater:   handleUndoLastWater,
           onUpdateWaterGoal: handleUpdateWaterGoal,
+          waterPresets,
+          onUpdateWaterPresets: handleUpdateWaterPresets,
+          consumptionLimits,
+          consumptionLog,
+          onAddConsumption:  handleAddConsumption,
+          onUndoConsumption: handleUndoConsumption,
         });
     }
   }

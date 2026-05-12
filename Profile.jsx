@@ -308,6 +308,151 @@ function EditProfileSheet({ userData, onClose, onSave }) {
   );
 }
 
+function ConsumptionLimitsSheet({ limits, onClose, onSave }) {
+  const [localLimits, setLocalLimits] = React.useState(limits || []);
+  const [newIcon,     setNewIcon]     = React.useState('⚡');
+  const [newName,     setNewName]     = React.useState('');
+  const [newMax,      setNewMax]      = React.useState('');
+  const [newPeriod,   setNewPeriod]   = React.useState('weekly');
+
+  function addLimit() {
+    const max = parseInt(newMax, 10);
+    if (!newName.trim() || isNaN(max) || max < 1) return;
+    const entry = {
+      id:     (typeof uniqueId === 'function') ? uniqueId() : Date.now().toString(),
+      icon:   newIcon || '⚡',
+      name:   newName.trim().slice(0, 40),
+      limit:  max,
+      period: newPeriod,
+    };
+    setLocalLimits(prev => [...prev, entry]);
+    setNewIcon('⚡'); setNewName(''); setNewMax(''); setNewPeriod('weekly');
+  }
+
+  function removeLimit(id) {
+    setLocalLimits(prev => prev.filter(l => l.id !== id));
+  }
+
+  const PERIOD_LABELS = { daily: 'Diario', weekly: 'Semanal' };
+
+  return React.createElement('div', {
+    style: {
+      position: 'absolute', bottom: 0, left: 0, right: 0,
+      background: 'var(--bg-card, white)', borderRadius: '22px 22px 0 0',
+      boxShadow: '0 -8px 32px rgba(30,20,8,0.16)',
+      padding: '0 20px 32px', maxHeight: '85%', overflowY: 'auto', zIndex: 60,
+    }
+  },
+    React.createElement('div', { style: { width: 36, height: 4, background: '#D4C8B4', borderRadius: 999, margin: '12px auto 16px' } }),
+    React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 18, fontWeight: 800, color: 'var(--color-text, #1E1408)', marginBottom: 4 } }, 'Límites de consumo'),
+    React.createElement('div', { style: { fontSize: 13, color: 'var(--color-sub, #7A6652)', marginBottom: 16 } }, 'Define un máximo de consumo diario o semanal para cualquier producto.'),
+
+    // Existing limits list
+    localLimits.length > 0 && React.createElement('div', { style: { marginBottom: 16 } },
+      localLimits.map(l =>
+        React.createElement('div', {
+          key: l.id,
+          style: {
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '10px 12px', marginBottom: 6,
+            background: 'var(--bg-card2, #F5EFE4)', borderRadius: 14,
+          }
+        },
+          React.createElement('span', { style: { fontSize: 20 } }, l.icon),
+          React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+            React.createElement('div', { style: { fontSize: 14, fontWeight: 600, color: 'var(--color-text, #1E1408)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, l.name),
+            React.createElement('div', { style: { fontSize: 11, color: 'var(--color-muted, #9A8878)', marginTop: 1 } },
+              `Máx. ${l.limit} · ${PERIOD_LABELS[l.period] || l.period}`
+            )
+          ),
+          React.createElement('button', {
+            onClick: () => removeLimit(l.id),
+            'aria-label': `Eliminar límite ${l.name}`,
+            type: 'button',
+            style: {
+              width: 28, height: 28, borderRadius: 999, border: 'none',
+              background: 'var(--accent-danger-soft, #FFE0E0)',
+              color: 'var(--accent-danger-text, #C03030)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', fontSize: 14, fontWeight: 700, flexShrink: 0,
+            }
+          }, '×')
+        )
+      )
+    ),
+
+    // Add new limit form
+    React.createElement('div', { style: { background: 'var(--bg-card2, #F5EFE4)', borderRadius: 14, padding: '14px' } },
+      React.createElement('div', { style: { fontSize: 12, fontWeight: 700, color: 'var(--color-sub, #5A4838)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 } }, 'Nuevo límite'),
+      React.createElement('div', { style: { display: 'flex', gap: 8, marginBottom: 10 } },
+        React.createElement('input', {
+          type: 'text', value: newIcon,
+          onChange: e => setNewIcon(e.target.value.slice(0, 2)),
+          placeholder: '⚡',
+          'aria-label': 'Emoji',
+          style: { width: 48, textAlign: 'center', padding: '10px 4px', borderRadius: 10, border: '1.5px solid var(--border-color, #EAE0D0)', background: 'var(--bg-card, white)', fontSize: 18, outline: 'none' }
+        }),
+        React.createElement('input', {
+          type: 'text', value: newName,
+          onChange: e => setNewName(e.target.value.slice(0, 40)),
+          placeholder: 'Ej: Bebida energética',
+          'aria-label': 'Nombre del límite',
+          style: { flex: 1, padding: '10px 12px', borderRadius: 10, border: '1.5px solid var(--border-color, #EAE0D0)', background: 'var(--bg-card, white)', fontFamily: "'DM Sans',sans-serif", fontSize: 14, color: 'var(--color-text, #1E1408)', outline: 'none' }
+        })
+      ),
+      React.createElement('div', { style: { display: 'flex', gap: 8, marginBottom: 10 } },
+        React.createElement('div', { style: { flex: 1 } },
+          React.createElement('div', { style: { fontSize: 11, fontWeight: 600, color: 'var(--color-sub, #5A4838)', marginBottom: 5 } }, 'Máximo'),
+          React.createElement('input', {
+            type: 'number', inputMode: 'numeric',
+            value: newMax, min: 1, max: 999,
+            onChange: e => setNewMax(e.target.value),
+            placeholder: 'Ej: 2',
+            'aria-label': 'Cantidad máxima',
+            style: { width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid var(--border-color, #EAE0D0)', background: 'var(--bg-card, white)', fontFamily: "'Nunito',sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--color-text, #1E1408)', outline: 'none' }
+          })
+        ),
+        React.createElement('div', { style: { flex: 1 } },
+          React.createElement('div', { style: { fontSize: 11, fontWeight: 600, color: 'var(--color-sub, #5A4838)', marginBottom: 5 } }, 'Período'),
+          React.createElement('div', { style: { display: 'flex', gap: 4 } },
+            ['daily', 'weekly'].map(p =>
+              React.createElement('button', {
+                key: p, type: 'button',
+                onClick: () => setNewPeriod(p),
+                style: {
+                  flex: 1, padding: '10px 4px', borderRadius: 10, cursor: 'pointer', font: 'inherit',
+                  fontSize: 12, fontWeight: 600,
+                  border: `1.5px solid ${newPeriod === p ? '#F5D040' : 'var(--border-color, #EAE0D0)'}`,
+                  background: newPeriod === p ? '#FFF3C4' : 'var(--bg-card, white)',
+                  color: newPeriod === p ? '#9A6D00' : 'var(--color-muted, #9A8878)',
+                }
+              }, PERIOD_LABELS[p])
+            )
+          )
+        )
+      ),
+      React.createElement('button', {
+        onClick: addLimit, type: 'button',
+        style: {
+          width: '100%', padding: '12px', borderRadius: 999, border: 'none',
+          background: newName.trim() && parseInt(newMax, 10) > 0 ? '#F5D040' : '#EAE0D0',
+          fontFamily: "'DM Sans',sans-serif", fontSize: 14, fontWeight: 600,
+          color: newName.trim() && parseInt(newMax, 10) > 0 ? '#1E1408' : '#B8A898',
+          cursor: newName.trim() && parseInt(newMax, 10) > 0 ? 'pointer' : 'not-allowed',
+        }
+      }, 'Agregar límite')
+    ),
+
+    React.createElement('div', { style: { display: 'flex', gap: 10, marginTop: 16 } },
+      React.createElement('button', { onClick: onClose, style: { flex: 1, padding: '14px', background: 'var(--bg-card, white)', border: '1.5px solid var(--border-color, #EAE0D0)', borderRadius: 999, fontFamily: "'DM Sans',sans-serif", fontSize: 15, fontWeight: 600, color: 'var(--color-sub, #7A6652)', cursor: 'pointer' } }, 'Cancelar'),
+      React.createElement('button', {
+        onClick: () => onSave(localLimits),
+        style: { flex: 2, padding: '14px', background: '#F5D040', border: 'none', borderRadius: 999, fontFamily: "'DM Sans',sans-serif", fontSize: 15, fontWeight: 600, color: '#1E1408', cursor: 'pointer' }
+      }, 'Guardar')
+    )
+  );
+}
+
 function ToggleSwitch({ active, onToggle }) {
   return React.createElement('div', {
     onClick: onToggle,
@@ -329,19 +474,21 @@ function ToggleSwitch({ active, onToggle }) {
   );
 }
 
-function Profile({ userData, dailyGoals, onUpdateGoals, onNavigate, onLogout, onUpdateUserData, notifPrefs, onUpdateNotifPrefs, waterGoal, onUpdateWaterGoal, darkTheme, onUpdateDarkTheme }) {
+function Profile({ userData, dailyGoals, onUpdateGoals, onNavigate, onLogout, onUpdateUserData, notifPrefs, onUpdateNotifPrefs, waterGoal, onUpdateWaterGoal, darkTheme, onUpdateDarkTheme, consumptionLimits, onUpdateConsumptionLimits }) {
   const [showEdit, setShowEdit] = React.useState(false);
   const [showEditProfile, setShowEditProfile] = React.useState(false);
   const [showEditActivity, setShowEditActivity] = React.useState(false);
   const [showEditRoutine, setShowEditRoutine] = React.useState(false);
   const [showNotifSettings, setShowNotifSettings] = React.useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false);
+  const [showLimitsSheet, setShowLimitsSheet] = React.useState(false);
 
-  const anyOverlayOpen = showLogoutConfirm || showEdit || showEditProfile || showEditActivity || showEditRoutine || showNotifSettings;
+  const anyOverlayOpen = showLogoutConfirm || showEdit || showEditProfile || showEditActivity || showEditRoutine || showNotifSettings || showLimitsSheet;
 
   // Escape closes whichever overlay is open, top-first.
   useEscapeKey(() => {
     if (showLogoutConfirm)      setShowLogoutConfirm(false);
+    else if (showLimitsSheet)   setShowLimitsSheet(false);
     else if (showEdit)          setShowEdit(false);
     else if (showEditProfile)   setShowEditProfile(false);
     else if (showEditActivity)  setShowEditActivity(false);
@@ -422,6 +569,36 @@ function Profile({ userData, dailyGoals, onUpdateGoals, onNavigate, onLogout, on
         React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 15, fontWeight: 700, color: 'var(--color-text, #1E1408)' } }, 'Tu motivación')
       ),
       React.createElement('div', { style: { fontSize: 13, color: 'var(--color-sub, #5A4838)', lineHeight: 1.55, fontStyle: 'italic' } }, `"${personalGoal}"`)
+    ),
+    // Consumption limits card
+    React.createElement('div', { style: { margin: '0 16px 14px', background: 'var(--bg-card, white)', borderRadius: 20, padding: '16px 18px', boxShadow: '0 2px 12px rgba(30,20,8,0.07)' } },
+      React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: (consumptionLimits && consumptionLimits.length > 0) ? 10 : 0 } },
+        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } },
+          React.createElement('span', { style: { fontSize: 16 } }, '🚦'),
+          React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--color-text, #1E1408)' } }, 'Límites de consumo')
+        ),
+        React.createElement('button', {
+          onClick: () => setShowLimitsSheet(true),
+          type: 'button',
+          style: { fontSize: 13, fontWeight: 600, color: '#9A6D00', background: '#FFF3C4', border: 'none', borderRadius: 999, padding: '8px 16px', minHeight: 36, cursor: 'pointer' }
+        }, 'Configurar')
+      ),
+      (!consumptionLimits || consumptionLimits.length === 0)
+        ? React.createElement('div', { style: { fontSize: 13, color: 'var(--color-muted, #9A8878)', marginTop: 4 } }, 'Sin límites configurados. Toca "Configurar" para agregar uno.')
+        : consumptionLimits.map(l =>
+            React.createElement('div', {
+              key: l.id,
+              style: { display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid var(--border-color, #F5EFE4)' }
+            },
+              React.createElement('span', { style: { fontSize: 18 } }, l.icon || '⚡'),
+              React.createElement('div', { style: { flex: 1 } },
+                React.createElement('div', { style: { fontSize: 14, fontWeight: 500, color: 'var(--color-text, #1E1408)' } }, l.name),
+                React.createElement('div', { style: { fontSize: 11, color: 'var(--color-muted, #9A8878)', marginTop: 1 } },
+                  `Máx. ${l.limit} · ${l.period === 'weekly' ? 'Semanal' : 'Diario'}`
+                )
+              )
+            )
+          )
     ),
     // Goals card
     React.createElement('div', { style: { margin: '0 16px 14px', background: 'var(--bg-card, white)', borderRadius: 20, padding: '16px 18px', boxShadow: '0 2px 12px rgba(30,20,8,0.07)' } },
@@ -610,8 +787,20 @@ function Profile({ userData, dailyGoals, onUpdateGoals, onNavigate, onLogout, on
         if (onUpdateUserData) onUpdateUserData(prev => ({ ...prev, ...updates }));
         setShowEditRoutine(false);
       }
+    }),
+    showLimitsSheet && React.createElement('div', {
+      onClick: () => setShowLimitsSheet(false),
+      style: { position: 'absolute', inset: 0, background: 'rgba(30,20,8,0.3)', zIndex: 50 }
+    }),
+    showLimitsSheet && React.createElement(ConsumptionLimitsSheet, {
+      limits: consumptionLimits || [],
+      onClose: () => setShowLimitsSheet(false),
+      onSave: (newLimits) => {
+        if (onUpdateConsumptionLimits) onUpdateConsumptionLimits(newLimits);
+        setShowLimitsSheet(false);
+      }
     })
   );
 }
 
-Object.assign(window, { Profile, EditProfileSheet, ToggleSwitch });
+Object.assign(window, { Profile, EditProfileSheet, ToggleSwitch, ConsumptionLimitsSheet });
