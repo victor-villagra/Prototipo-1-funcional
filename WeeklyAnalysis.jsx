@@ -81,6 +81,8 @@ function NextWeekGoals({ goals, onChange }) {
 function WeeklyAnalysis({ onBack, dailyLog, dailyGoals, userData, onUpdateGoals }) {
   const goalKcal = dailyGoals ? dailyGoals.kcal : 2000;
 
+  useEscapeKey(() => { if (onBack) onBack(); }, true);
+
   // Build week data from dailyLog
   const today = new Date();
   const DAYS_SHORT = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];

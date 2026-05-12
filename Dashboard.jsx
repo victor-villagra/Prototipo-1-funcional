@@ -224,6 +224,9 @@ function Dashboard({ onNavigate, userData, todayMeals, dailyGoals, unreadCount, 
   const goals = dailyGoals || { kcal: 2000, protein: 80, fat: 70, carbs: 300, sugar: 50 };
   const [selectedMeal, setSelectedMeal] = React.useState(null);
 
+  useEscapeKey(() => setSelectedMeal(null), !!selectedMeal);
+  useBodyClass('kcalia-modal-open', !!selectedMeal);
+
   const totals = (todayMeals || []).reduce((acc, meal) => {
     acc.kcal    += meal.totalKcal    || 0;
     acc.protein += meal.totalProtein || 0;

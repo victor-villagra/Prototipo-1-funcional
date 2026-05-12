@@ -160,6 +160,43 @@ function computeNutritionTargets({ weight, height, age, sex, activity, goal, tar
   return { bmr: Math.round(bmr), tdee, targetKcal, suggestedGoals: { kcal: targetKcal, protein, fat, carbs, sugar: 50 } };
 }
 
+// Toggle a CSS class on document.body while `active` is true. Used to hide
+// the bottom nav while a sheet/modal is open so the sheet's action buttons
+// don't collide with the floating FAB. Cleans up on unmount or deactivation.
+function useBodyClass(className, active) {
+  React.useEffect(() => {
+    if (!active) return;
+    document.body.classList.add(className);
+    return () => document.body.classList.remove(className);
+  }, [className, active]);
+}
+
+// Subscribe to the Escape key while `active` is true. Components use this to
+// dismiss bottom sheets and modal dialogs without each one wiring up its own
+// keydown listener.
+function useEscapeKey(onEscape, active = true) {
+  React.useEffect(() => {
+    if (!active) return;
+    function onKey(e) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        if (typeof onEscape === 'function') onEscape();
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [active, onEscape]);
+}
+
+// Monotonic-ish unique id. Date.now() collides if two entries are created in
+// the same millisecond (e.g. quick double-tap or restoring a saved cart). The
+// suffix is a 4-char base36 chunk so the id stays sortable by creation order
+// while staying unique within a ms. Result still parses to a number-like string
+// at the head, but consumers should treat the whole thing as opaque.
+function uniqueId() {
+  return Date.now().toString() + '_' + Math.random().toString(36).slice(2, 6);
+}
+
 // Numeric input helper used by edit sheets — clamps to [min, max] but allows
 // the user to clear the field while typing (returns '' for an empty value).
 function parseClampedNumber(raw, min, max, allowFloat = true) {
@@ -184,4 +221,7 @@ Object.assign(window, {
   defaultMealNameForHour,
   computeNutritionTargets,
   parseClampedNumber,
+  uniqueId,
+  useEscapeKey,
+  useBodyClass,
 });

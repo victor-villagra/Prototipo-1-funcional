@@ -196,6 +196,12 @@ function AddMeal({ onBack, onAddMeal, onUpdateMeal, onGoToLibrary, mealName: ini
   const [viewCart, setViewCart]   = React.useState(false);
   const [confirmed, setConfirmed] = React.useState(false);
 
+  useEscapeKey(() => {
+    if (selecting)      setSelecting(null);
+    else if (viewCart)  setViewCart(false);
+    else if (onBack)    onBack();
+  }, true);
+
   // foodLibrary already includes both custom + DB foods (merged in index.html)
   const allFoods = foodLibrary || [];
   // Accent-insensitive search: typing "platano" matches "Plátano". Without
@@ -239,7 +245,10 @@ function AddMeal({ onBack, onAddMeal, onUpdateMeal, onGoToLibrary, mealName: ini
     } else if (onAddMeal) {
       const now = new Date();
       onAddMeal({
-        id: Date.now(),
+        id: (typeof uniqueId === 'function' ? uniqueId() : String(Date.now())),
+        // Explicit createdAt so downstream code (e.g. meal-hour reminder detection)
+        // doesn't have to parse the id. The id stays opaque for identity only.
+        createdAt: now.getTime(),
         name: finalName,
         foods: cart,
         ...totals,

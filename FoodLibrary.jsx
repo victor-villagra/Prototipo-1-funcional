@@ -384,7 +384,7 @@ function AddFoodSheet({ onClose, onSave, editFood }) {
           const sugarRaw   = parseFloat(form.sugar)   || 0;
           // For unit:'g', values entered are per 1g. For unit:'u', values are per unit.
           const normalized = {
-            id: (editFood && editFood.custom) ? editFood.id : Date.now(),
+            id: (editFood && editFood.custom) ? editFood.id : (typeof uniqueId === 'function' ? uniqueId() : String(Date.now())),
             name: form.name.trim(),
             unit: form.unit,
             kcal:    kcalRaw,
@@ -446,6 +446,14 @@ function FoodLibrary({ onBack, library, onUpdateLibrary }) {
   const [editFood, setEditFood] = React.useState(null);
   const [selected, setSelected] = React.useState(null);
   const [tab, setTab]           = React.useState('all');
+
+  useEscapeKey(() => {
+    if (showAdd) { setShowAdd(false); setEditFood(null); }
+    else if (selected) setSelected(null);
+    else if (onBack) onBack();
+  }, true);
+
+  useBodyClass('kcalia-modal-open', showAdd || !!selected);
 
   const customFoods = library || [];
 

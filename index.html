@@ -34,6 +34,10 @@
   input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
   input[type=number] { -moz-appearance: textfield; }
 
+  /* While a bottom sheet / modal is open, hide the bottom nav so the sheet's
+     action buttons don't collide with the floating FAB ("+ Agregar comida"). */
+  body.kcalia-modal-open .kcalia-bottom-nav { display: none; }
+
   /* ── Mobile / PWA: fill the entire screen ── */
   @media (max-width: 600px) {
     html, body {
@@ -121,12 +125,24 @@
 </style>
 
 <script>
-  // Apply dark theme immediately to avoid flash
+  // Apply dark theme immediately to avoid flash. Read from the main kcalia_v1
+  // envelope; fall back to the legacy 'kcalia_dark_theme' key during the
+  // migration window so users upgrading from older builds don't lose their pref.
   (function() {
     try {
-      if (JSON.parse(localStorage.getItem('kcalia_dark_theme'))) {
-        document.body.classList.add('dark');
+      var raw = localStorage.getItem('kcalia_v1');
+      var dark = false;
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        var data = (parsed && parsed._v) ? parsed.data : parsed;
+        if (data && typeof data.darkTheme === 'boolean') dark = data.darkTheme;
       }
+      if (!dark) {
+        // Legacy key — read once, will be migrated into the envelope on next save.
+        var legacy = localStorage.getItem('kcalia_dark_theme');
+        if (legacy) dark = !!JSON.parse(legacy);
+      }
+      if (dark) document.body.classList.add('dark');
     } catch(e) {}
   })();
 </script>
@@ -147,7 +163,7 @@
 <script src="WaterTracker.jsx"></script>
 
 <script>
-const { useState, useEffect } = React;
+const { useState, useEffect, useMemo } = React;
 
 // ── localStorage helpers ──────────────────────────────────────────
 const STORAGE_KEY = 'kcalia_v1';
@@ -265,14 +281,42 @@ function App() {
   const [notifPrefs, setNotifPrefs] = useState(saved && saved.notifPrefs ? saved.notifPrefs : DEFAULT_NOTIF_PREFS);
   const [waterLog, setWaterLog]   = useState(saved && saved.waterLog  ? saved.waterLog  : []);
   const [waterGoal, setWaterGoal] = useState(saved && saved.waterGoal ? saved.waterGoal : 2000);
+  const [darkTheme, setDarkTheme] = useState(() => {
+    if (saved && typeof saved.darkTheme === 'boolean') return saved.darkTheme;
+    // One-time migration from the legacy standalone key, then remove it.
+    try {
+      const legacy = localStorage.getItem('kcalia_dark_theme');
+      if (legacy != null) {
+        localStorage.removeItem('kcalia_dark_theme');
+        return !!JSON.parse(legacy);
+      }
+    } catch {}
+    return false;
+  });
+
+  // Keep body.dark in sync with state. The head script already applied the
+  // initial class to avoid flash, this handles toggles during the session.
+  useEffect(() => {
+    if (darkTheme) document.body.classList.add('dark');
+    else document.body.classList.remove('dark');
+  }, [darkTheme]);
+
+  // Show an "update available" banner when the SW registration script detects
+  // a newly installed worker. Reload picks up the fresh JSX/HTML from the new cache.
+  const [updateReady, setUpdateReady] = useState(false);
+  useEffect(() => {
+    function onUpdate() { setUpdateReady(true); }
+    window.addEventListener('kcalia-sw-update', onUpdate);
+    return () => window.removeEventListener('kcalia-sw-update', onUpdate);
+  }, []);
 
   // Persist with debounce to avoid writing on every keystroke
   useEffect(() => {
     const t = setTimeout(() => {
-      saveState({ userData, dailyGoals, dailyLog, foodLibrary, notifications, notifPrefs, waterLog, waterGoal });
+      saveState({ userData, dailyGoals, dailyLog, foodLibrary, notifications, notifPrefs, waterLog, waterGoal, darkTheme });
     }, 500);
     return () => clearTimeout(t);
-  }, [userData, dailyGoals, dailyLog, foodLibrary, notifications, notifPrefs, waterLog, waterGoal]);
+  }, [userData, dailyGoals, dailyLog, foodLibrary, notifications, notifPrefs, waterLog, waterGoal, darkTheme]);
 
   function navigate(s, mealName = '') {
     if (s === 'add') {
@@ -343,26 +387,27 @@ function App() {
     });
   }
 
+  // Confirmation is handled by an in-app modal in Profile.jsx, so this just
+  // wipes state. Triggers must guard with their own confirm UI.
   function handleLogout() {
-    if (window.confirm('¿Cerrar sesión? Esto borrará todos tus datos.')) {
-      localStorage.removeItem(STORAGE_KEY);
-      setUserData(null);
-      setDailyLog([]);
-      setDailyGoals({ ...DEFAULT_DAILY_GOALS });
-      setFoodLibrary([]);
-      setNotifications([]);
-      setNotifPrefs(DEFAULT_NOTIF_PREFS);
-      setWaterLog([]);
-      setWaterGoal(2000);
-      setScreen('onboarding');
-    }
+    localStorage.removeItem(STORAGE_KEY);
+    setUserData(null);
+    setDailyLog([]);
+    setDailyGoals({ ...DEFAULT_DAILY_GOALS });
+    setFoodLibrary([]);
+    setNotifications([]);
+    setNotifPrefs(DEFAULT_NOTIF_PREFS);
+    setWaterLog([]);
+    setWaterGoal(2000);
+    setDarkTheme(false);
+    setScreen('onboarding');
   }
 
   // ── Water tracking helpers ──
   function handleAddWater(ml) {
     const now = new Date();
     setWaterLog(prev => [...prev, {
-      id: Date.now(),
+      id: uniqueId(),
       date: localDateKey(now),
       ml,
       time: now.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' }),
@@ -413,11 +458,14 @@ function App() {
     return () => clearTimeout(t);
   }, [dayTick]);
 
-  const today = localDateKey(new Date());
-  const todayMeals = dailyLog.filter(m => m.date === today);
-  const todayWater = waterLog.filter(w => w.date === today);
-  const todayWaterMl = todayWater.reduce((s, w) => s + (w.ml || 0), 0);
-  const unreadCount = notifications.filter(n => !n.read).length;
+  // dayTick bumps at local midnight so "today" rolls over even if the user
+  // leaves the app open overnight. Including it in the deps forces these
+  // memos to recompute when the day changes.
+  const today = useMemo(() => localDateKey(new Date()), [dayTick]);
+  const todayMeals   = useMemo(() => dailyLog.filter(m => m.date === today),  [dailyLog, today]);
+  const todayWater   = useMemo(() => waterLog.filter(w => w.date === today),  [waterLog, today]);
+  const todayWaterMl = useMemo(() => todayWater.reduce((s, w) => s + (w.ml || 0), 0), [todayWater]);
+  const unreadCount  = useMemo(() => notifications.filter(n => !n.read).length, [notifications]);
 
   // Generate notifications on load and periodically.
   // Pause the interval while the tab is hidden so we don't burn cycles checking
@@ -452,28 +500,34 @@ function App() {
       document.removeEventListener('visibilitychange', onVisibility);
       stop();
     };
-  }, [userData && userData.name]);
+    // Only re-run on login/logout transitions, not on every field change in
+    // userData. A name rename shouldn't tear down and re-create the interval.
+  }, [!!userData]);
 
-  // Prepare food list for AddMeal: custom library first, then DB foods not already in library
-  function toAddMealFormat(f) {
-    const isG = f.unit === 'g';
-    return {
-      ...f,
-      portion: f.portion || (isG ? '100g' : '1 unidad'),
-      kcal:    isG ? Math.round((f.kcalPerG || f.kcal) * 100) : f.kcal,
-      protein: isG ? parseFloat((f.protein * 100).toFixed(1)) : f.protein,
-      fat:     isG ? parseFloat((f.fat     * 100).toFixed(1)) : f.fat,
-      carbs:   isG ? parseFloat((f.carbs   * 100).toFixed(1)) : f.carbs,
-      sugar:   isG ? parseFloat((f.sugar   * 100).toFixed(1)) : f.sugar,
-      kcalPerG: isG ? (f.kcalPerG || f.kcal) : null,
-    };
-  }
-  const customMealFoods = foodLibrary.map(toAddMealFormat);
-  const customNames = new Set(foodLibrary.map(f => f.name.toLowerCase()));
-  const dbMealFoods = (window.DB_FOODS || [])
-    .filter(f => !customNames.has(f.name.toLowerCase()))
-    .map(toAddMealFormat);
-  const addMealFoods = [...customMealFoods, ...dbMealFoods];
+  // Prepare food list for AddMeal: custom library first, then DB foods not already in library.
+  // Memoized so the ~200-entry array isn't rebuilt on every parent render
+  // (e.g. every keystroke in any unrelated text input would otherwise reflow it).
+  const addMealFoods = useMemo(() => {
+    function toAddMealFormat(f) {
+      const isG = f.unit === 'g';
+      return {
+        ...f,
+        portion: f.portion || (isG ? '100g' : '1 unidad'),
+        kcal:    isG ? Math.round((f.kcalPerG || f.kcal) * 100) : f.kcal,
+        protein: isG ? parseFloat((f.protein * 100).toFixed(1)) : f.protein,
+        fat:     isG ? parseFloat((f.fat     * 100).toFixed(1)) : f.fat,
+        carbs:   isG ? parseFloat((f.carbs   * 100).toFixed(1)) : f.carbs,
+        sugar:   isG ? parseFloat((f.sugar   * 100).toFixed(1)) : f.sugar,
+        kcalPerG: isG ? (f.kcalPerG || f.kcal) : null,
+      };
+    }
+    const customMealFoods = foodLibrary.map(toAddMealFormat);
+    const customNames = new Set(foodLibrary.map(f => f.name.toLowerCase()));
+    const dbMealFoods = (window.DB_FOODS || [])
+      .filter(f => !customNames.has(f.name.toLowerCase()))
+      .map(toAddMealFormat);
+    return [...customMealFoods, ...dbMealFoods];
+  }, [foodLibrary]);
 
   function renderContent() {
     switch (screen) {
@@ -548,6 +602,8 @@ function App() {
           onUpdateNotifPrefs: handleUpdateNotifPrefs,
           waterGoal,
           onUpdateWaterGoal: handleUpdateWaterGoal,
+          darkTheme,
+          onUpdateDarkTheme: setDarkTheme,
         });
 
       default: // dashboard
@@ -568,14 +624,43 @@ function App() {
     }
   }
 
+  const updateBanner = updateReady && React.createElement('div', {
+    role: 'status',
+    style: {
+      position: 'fixed', left: '50%', transform: 'translateX(-50%)',
+      bottom: 'calc(env(safe-area-inset-bottom, 0px) + 90px)',
+      background: '#1E1408', color: '#FFF3C4',
+      borderRadius: 999, padding: '10px 14px 10px 18px',
+      boxShadow: '0 8px 24px rgba(30,20,8,0.35)',
+      display: 'flex', alignItems: 'center', gap: 10,
+      fontFamily: "'DM Sans',sans-serif", fontSize: 13, fontWeight: 600,
+      zIndex: 200, maxWidth: 'calc(100% - 32px)',
+    }
+  },
+    React.createElement('span', null, '✨ Nueva versión disponible'),
+    React.createElement('button', {
+      onClick: () => window.location.reload(),
+      type: 'button',
+      style: { background: '#F5D040', color: '#1E1408', border: 'none', borderRadius: 999, padding: '7px 14px', fontWeight: 700, cursor: 'pointer', font: 'inherit', minHeight: 36 }
+    }, 'Recargar'),
+    React.createElement('button', {
+      onClick: () => setUpdateReady(false),
+      type: 'button',
+      'aria-label': 'Cerrar aviso',
+      style: { background: 'transparent', color: '#FFF3C4', border: 'none', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: '0 4px', font: 'inherit' }
+    }, '×')
+  );
+
   if (FULLSCREEN.has(screen)) {
-    return React.createElement(PhoneShell, { screen },
-      renderContent()
+    return React.createElement(React.Fragment, null,
+      React.createElement(PhoneShell, { screen }, renderContent()),
+      updateBanner,
     );
   }
 
-  return React.createElement(AppShell, { screen, onNavigate: navigate },
-    renderContent()
+  return React.createElement(React.Fragment, null,
+    React.createElement(AppShell, { screen, onNavigate: navigate }, renderContent()),
+    updateBanner,
   );
 }
 
@@ -583,9 +668,30 @@ ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(
 </script>
 
 <script>
+  // Register the SW and watch for updates so a PWA that's already installed
+  // can prompt the user to pick up new JSX/HTML on the next deploy instead of
+  // staying stuck on the old cached build until they manually close/reopen.
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js').catch(() => {});
+      navigator.serviceWorker.register('./sw.js').then(reg => {
+        // Skip the prompt on the very first install (no controller = first visit).
+        if (!navigator.serviceWorker.controller) return;
+        function watchInstalling(worker) {
+          if (!worker) return;
+          worker.addEventListener('statechange', () => {
+            if (worker.state === 'installed') {
+              window.dispatchEvent(new CustomEvent('kcalia-sw-update'));
+            }
+          });
+        }
+        if (reg.waiting) window.dispatchEvent(new CustomEvent('kcalia-sw-update'));
+        reg.addEventListener('updatefound', () => watchInstalling(reg.installing));
+        // Check for updates when the tab regains focus, so a long-lived PWA
+        // catches new builds without waiting for the next cold start.
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') reg.update().catch(() => {});
+        });
+      }).catch(() => {});
     });
   }
 </script>

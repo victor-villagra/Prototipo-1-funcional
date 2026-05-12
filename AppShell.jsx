@@ -97,6 +97,7 @@ function BottomNav({ screen, onNavigate }) {
   ];
 
   return React.createElement('div', {
+    className: 'kcalia-bottom-nav',
     style: {
       background: 'var(--bg-card, white)', boxShadow: '0 -1px 0 rgba(30,20,8,0.06)',
       display: 'flex', padding: _isMobile() ? '8px 0 calc(8px + env(safe-area-inset-bottom, 12px))' : '8px 0 20px', flexShrink: 0,

@@ -82,6 +82,8 @@ function WaterTracker({ consumed, goal, onAdd, onUndo, onEditGoal }) {
 
   React.useEffect(() => { setGoalDraft(String(goal)); }, [goal]);
 
+  useEscapeKey(() => setEditingGoal(false), editingGoal);
+
   function commitGoal() {
     const n = parseInt(goalDraft, 10);
     if (!isNaN(n) && n >= 500 && n <= 6000 && onEditGoal) onEditGoal(n);

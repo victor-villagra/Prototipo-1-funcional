@@ -329,15 +329,29 @@ function ToggleSwitch({ active, onToggle }) {
   );
 }
 
-function Profile({ userData, dailyGoals, onUpdateGoals, onNavigate, onLogout, onUpdateUserData, notifPrefs, onUpdateNotifPrefs, waterGoal, onUpdateWaterGoal }) {
+function Profile({ userData, dailyGoals, onUpdateGoals, onNavigate, onLogout, onUpdateUserData, notifPrefs, onUpdateNotifPrefs, waterGoal, onUpdateWaterGoal, darkTheme, onUpdateDarkTheme }) {
   const [showEdit, setShowEdit] = React.useState(false);
   const [showEditProfile, setShowEditProfile] = React.useState(false);
   const [showEditActivity, setShowEditActivity] = React.useState(false);
   const [showEditRoutine, setShowEditRoutine] = React.useState(false);
   const [showNotifSettings, setShowNotifSettings] = React.useState(false);
-  const [darkTheme, setDarkTheme] = React.useState(() => {
-    try { return JSON.parse(localStorage.getItem('kcalia_dark_theme') || 'false'); } catch { return false; }
-  });
+  const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false);
+
+  const anyOverlayOpen = showLogoutConfirm || showEdit || showEditProfile || showEditActivity || showEditRoutine || showNotifSettings;
+
+  // Escape closes whichever overlay is open, top-first.
+  useEscapeKey(() => {
+    if (showLogoutConfirm)      setShowLogoutConfirm(false);
+    else if (showEdit)          setShowEdit(false);
+    else if (showEditProfile)   setShowEditProfile(false);
+    else if (showEditActivity)  setShowEditActivity(false);
+    else if (showEditRoutine)   setShowEditRoutine(false);
+    else if (showNotifSettings) setShowNotifSettings(false);
+  }, anyOverlayOpen);
+
+  // Hide the bottom nav while any sheet/modal is up so the FAB doesn't
+  // overlap the sheet's action buttons.
+  useBodyClass('kcalia-modal-open', anyOverlayOpen);
 
   const goals = dailyGoals || { kcal: 2000, protein: 80, fat: 70, carbs: 300, sugar: 50 };
 
@@ -350,6 +364,7 @@ function Profile({ userData, dailyGoals, onUpdateGoals, onNavigate, onLogout, on
     { label: 'Agua',     val: waterGoal || 2000, unit: 'ml', color: '#3A8FB7', bg: '#DFF3FA' },
   ];
 
+  const personalGoal = userData ? (userData.personalGoal || '')      : '';
   const name         = userData ? (userData.name || 'Usuario')       : 'Usuario';
   // Filter empty parts so a name like "Victor  Villagra" (double space) doesn't
   // crash on n[0] for an empty token.
@@ -362,14 +377,7 @@ function Profile({ userData, dailyGoals, onUpdateGoals, onNavigate, onLogout, on
   const activity     = userData ? userData.activity     : null;
 
   function toggleTheme() {
-    const next = !darkTheme;
-    setDarkTheme(next);
-    localStorage.setItem('kcalia_dark_theme', JSON.stringify(next));
-    if (next) {
-      document.body.classList.add('dark');
-    } else {
-      document.body.classList.remove('dark');
-    }
+    if (onUpdateDarkTheme) onUpdateDarkTheme(!darkTheme);
   }
 
   const notifEnabled = notifPrefs ? notifPrefs.enabled : true;
@@ -406,6 +414,14 @@ function Profile({ userData, dailyGoals, onUpdateGoals, onNavigate, onLogout, on
           )
         )
       )
+    ),
+    // Personal motivation (from onboarding's personalGoal). Hidden when empty.
+    personalGoal && React.createElement('div', { style: { margin: '0 16px 14px', background: 'var(--bg-card, white)', borderRadius: 20, padding: '16px 18px', boxShadow: '0 2px 12px rgba(30,20,8,0.07)' } },
+      React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 } },
+        React.createElement('span', { style: { fontSize: 16 } }, '🎯'),
+        React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 15, fontWeight: 700, color: 'var(--color-text, #1E1408)' } }, 'Tu motivación')
+      ),
+      React.createElement('div', { style: { fontSize: 13, color: 'var(--color-sub, #5A4838)', lineHeight: 1.55, fontStyle: 'italic' } }, `"${personalGoal}"`)
     ),
     // Goals card
     React.createElement('div', { style: { margin: '0 16px 14px', background: 'var(--bg-card, white)', borderRadius: 20, padding: '16px 18px', boxShadow: '0 2px 12px rgba(30,20,8,0.07)' } },
@@ -503,9 +519,35 @@ function Profile({ userData, dailyGoals, onUpdateGoals, onNavigate, onLogout, on
     ),
     React.createElement('div', { style: { margin: '0 16px' } },
       React.createElement('button', {
-        onClick: onLogout,
+        onClick: () => setShowLogoutConfirm(true),
         style: { width: '100%', background: 'var(--bg-card, white)', border: '1.5px solid var(--border-color, #EAE0D0)', borderRadius: 999, padding: '14px', fontFamily: "'DM Sans',sans-serif", fontSize: 15, fontWeight: 600, color: '#FF6B6B', cursor: 'pointer' }
       }, 'Cerrar sesión')
+    ),
+    showLogoutConfirm && React.createElement('div', {
+      onClick: () => setShowLogoutConfirm(false),
+      style: { position: 'absolute', inset: 0, background: 'rgba(30,20,8,0.45)', zIndex: 70, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }
+    },
+      React.createElement('div', {
+        onClick: e => e.stopPropagation(),
+        role: 'alertdialog',
+        'aria-labelledby': 'logout-title',
+        style: { background: 'var(--bg-card, white)', borderRadius: 20, padding: '22px 20px', maxWidth: 340, width: '100%', boxShadow: '0 16px 48px rgba(30,20,8,0.25)' }
+      },
+        React.createElement('div', { id: 'logout-title', style: { fontFamily: "'Nunito',sans-serif", fontSize: 18, fontWeight: 800, color: 'var(--color-text, #1E1408)', marginBottom: 8 } }, '¿Cerrar sesión?'),
+        React.createElement('div', { style: { fontSize: 14, color: 'var(--color-sub, #7A6652)', marginBottom: 18, lineHeight: 1.5 } }, 'Esto borrará todos tus datos guardados en este dispositivo: comidas, agua, biblioteca personal y preferencias. Esta acción no se puede deshacer.'),
+        React.createElement('div', { style: { display: 'flex', gap: 10 } },
+          React.createElement('button', {
+            onClick: () => setShowLogoutConfirm(false),
+            type: 'button',
+            style: { flex: 1, padding: '13px', background: 'var(--bg-card, white)', border: '1.5px solid var(--border-color, #EAE0D0)', borderRadius: 999, fontFamily: "'DM Sans',sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--color-sub, #5A4838)', cursor: 'pointer', minHeight: 44 }
+          }, 'Cancelar'),
+          React.createElement('button', {
+            onClick: () => { setShowLogoutConfirm(false); if (onLogout) onLogout(); },
+            type: 'button',
+            style: { flex: 1, padding: '13px', background: '#FF6B6B', border: 'none', borderRadius: 999, fontFamily: "'DM Sans',sans-serif", fontSize: 14, fontWeight: 600, color: 'white', cursor: 'pointer', minHeight: 44, boxShadow: '0 2px 8px rgba(255,107,107,0.35)' }
+          }, 'Cerrar sesión')
+        )
+      )
     ),
     showEdit && React.createElement('div', {
       onClick: () => setShowEdit(false),

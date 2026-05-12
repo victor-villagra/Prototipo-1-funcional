@@ -44,12 +44,19 @@ function generateAppNotifications(todayMeals, dailyGoals, dailyLog, userData, ex
     if (hour >= 7 && hour < 11 && todayMeals.length === 0 && !has('breakfast_rem', 4)) {
       out.push({ type: 'reminder', subtype: 'breakfast_rem', title: '¿Ya desayunaste? 🍳', message: 'Registra tu desayuno para mantener el seguimiento al día.', action: { screen: 'add', mealName: 'Desayuno' } });
     }
-    // Detect meals by the hour they were logged (meal.id is Date.now() at save time)
-    // rather than by name. Users can rename meals freely ("Lunch", "Almuerzo tarde",
-    // "Comida 1"), so name matching missed legitimate entries and double-spammed reminders.
+    // Detect meals by the hour they were logged rather than by name. Users can
+    // rename meals freely ("Lunch", "Almuerzo tarde", "Comida 1"), so name
+    // matching missed legitimate entries and double-spammed reminders.
+    // Prefers explicit createdAt; falls back to legacy numeric ids; finally,
+    // tries to extract the leading timestamp from new-style "1234_abcd" ids.
     const _mealHour = (m) => {
-      const t = typeof m.id === 'number' ? m.id : Date.parse(m.id);
-      return isNaN(t) ? -1 : new Date(t).getHours();
+      if (typeof m.createdAt === 'number') return new Date(m.createdAt).getHours();
+      if (typeof m.id === 'number') return new Date(m.id).getHours();
+      if (typeof m.id === 'string') {
+        const head = parseInt(m.id.split('_')[0], 10);
+        if (!isNaN(head)) return new Date(head).getHours();
+      }
+      return -1;
     };
     if (hour >= 12 && hour < 15 && !has('lunch_rem', 3)) {
       const hasLunch = todayMeals.some(m => { const h = _mealHour(m); return h >= 12 && h < 16; });
@@ -160,6 +167,8 @@ function generateAppNotifications(todayMeals, dailyGoals, dailyLog, userData, ex
 // ── Notification Center ───────────────────────────────────────────
 function NotificationCenter({ notifications, onMarkRead, onMarkAllRead, onClearAll, onAction, onBack, onOpenSettings }) {
   const unread = notifications.filter(n => !n.read).length;
+
+  useEscapeKey(() => { if (onBack) onBack(); }, true);
 
   function timeAgo(ts) {
     const diff = (Date.now() - new Date(ts).getTime()) / 1000;
