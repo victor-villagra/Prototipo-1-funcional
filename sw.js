@@ -1,6 +1,6 @@
 // KCALIA Service Worker — offline-first cache.
 // Bump CACHE whenever JSX/HTML assets change so users pick up new code on next load.
-const CACHE = 'kcalia-v10';
+const CACHE = 'kcalia-v12';
 const ASSETS = [
   './',
   './index.html',

@@ -236,6 +236,70 @@ function saveState(state) {
 // ── Screen config ─────────────────────────────────────────────────
 const FULLSCREEN = new Set(['onboarding', 'add', 'weekly', 'notifications']);
 
+// ── Error boundary ───────────────────────────────────────────────
+// In React 18 production builds an unhandled render error silently
+// unmounts the subtree, so a buggy screen looked to the user like a
+// blank page with no way back (the `weekly` route in particular hit
+// this). The boundary catches the throw, renders a recoverable
+// fallback with a "go home" action, and logs the error for
+// debugging. Resets when `resetKey` changes so navigating to a new
+// screen doesn't get stuck in the error state forever.
+class ScreenErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+  componentDidCatch(error, info) {
+    // eslint-disable-next-line no-console
+    try { console.error('Screen error:', error, info); } catch (e) {}
+  }
+  componentDidUpdate(prevProps) {
+    if (prevProps.resetKey !== this.props.resetKey && this.state.error) {
+      this.setState({ error: null });
+    }
+  }
+  render() {
+    if (!this.state.error) return this.props.children;
+    const msg = (this.state.error && this.state.error.message) || 'Error inesperado';
+    return React.createElement('div', {
+      style: {
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        justifyContent: 'center', height: '100%', padding: 24, gap: 14,
+        background: 'var(--bg-main, #FEFAF3)', textAlign: 'center',
+      }
+    },
+      React.createElement('div', {
+        style: {
+          width: 64, height: 64, borderRadius: 999,
+          background: 'var(--accent-danger-soft, #FFE0E0)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 30,
+        }
+      }, '⚠️'),
+      React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 20, fontWeight: 800, color: 'var(--color-text, #1E1408)' } }, 'Algo salió mal'),
+      React.createElement('div', { style: { fontSize: 13, color: 'var(--color-sub, #7A6652)', lineHeight: 1.5, maxWidth: 280 } },
+        'No pudimos mostrar esta pantalla. Vuelve al inicio y reintenta. Si el problema persiste, recarga la app.'
+      ),
+      React.createElement('div', { style: { fontSize: 11, color: 'var(--color-muted, #9A8878)', maxWidth: 300, wordBreak: 'break-word' } }, msg),
+      React.createElement('div', { style: { display: 'flex', gap: 10, marginTop: 4 } },
+        React.createElement('button', {
+          type: 'button',
+          onClick: () => { this.setState({ error: null }); if (this.props.onRecover) this.props.onRecover(); },
+          style: { background: '#F5D040', border: 'none', borderRadius: 999, padding: '12px 22px', fontFamily: "'DM Sans',sans-serif", fontSize: 14, fontWeight: 600, color: '#1E1408', cursor: 'pointer', boxShadow: '0 2px 8px rgba(245,208,64,0.35)' }
+        }, 'Volver al inicio'),
+        React.createElement('button', {
+          type: 'button',
+          onClick: () => window.location.reload(),
+          style: { background: 'var(--bg-card, white)', border: '1.5px solid var(--border-color, #EAE0D0)', borderRadius: 999, padding: '12px 22px', fontFamily: "'DM Sans',sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--color-sub, #7A6652)', cursor: 'pointer' }
+        }, 'Recargar')
+      )
+    );
+  }
+}
+
 function PhoneShell({ screen, children }) {
   const mobile = useIsMobile();
   return React.createElement('div', {
@@ -783,15 +847,23 @@ function App() {
     }, '×')
   );
 
+  // Wrap renderContent() in an error boundary so a render-time exception in
+  // any single screen (e.g. weekly) doesn't blank the whole app. resetKey is
+  // tied to `screen` so navigating clears any stuck error state.
+  const safeContent = React.createElement(ScreenErrorBoundary, {
+    resetKey: screen,
+    onRecover: () => navigate('dashboard'),
+  }, renderContent());
+
   if (FULLSCREEN.has(screen)) {
     return React.createElement(React.Fragment, null,
-      React.createElement(PhoneShell, { screen }, renderContent()),
+      React.createElement(PhoneShell, { screen }, safeContent),
       updateBanner,
     );
   }
 
   return React.createElement(React.Fragment, null,
-    React.createElement(AppShell, { screen, onNavigate: navigate }, renderContent()),
+    React.createElement(AppShell, { screen, onNavigate: navigate }, safeContent),
     updateBanner,
   );
 }
