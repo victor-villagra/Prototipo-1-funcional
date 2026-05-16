@@ -1,8 +1,15 @@
 // WeeklyAnalysis.jsx — Weekly analysis + next week goal adjustment.
-// Training labels/colors come from Constants.jsx so they stay in sync with Onboarding.
-// Local fallbacks are kept in case Constants.jsx isn't loaded for some reason.
-const TRAINING_COLORS = (typeof window !== 'undefined' && window.TRAINING_COLORS) || { strength: '#7EC8E3', cardio: '#FF8C69', rest: '#D4C8B4', mixed: '#C5A3FF' };
-const TRAINING_LABELS = (typeof window !== 'undefined' && window.TRAINING_LABELS) || { strength: 'Fuerza', cardio: 'Cardio', rest: 'Descanso', mixed: 'Mixto' };
+// Training labels/colors come from Constants.jsx so they stay in sync with
+// Onboarding. We MUST NOT declare `const _TC` / `const _TL`
+// here even with a window-fallback fallback expression: every script tag at
+// the top of index.html runs in the same global lexical scope, so a second
+// `const` of an identifier already declared in Constants.jsx is a SyntaxError
+// that aborts the entire file. The previous version did exactly that, which
+// meant `window.WeeklyAnalysis` was never assigned and navigating to the
+// Análisis Semanal screen rendered nothing — the long-standing blank-page bug.
+// The underscore-prefixed names below sidestep the clash entirely.
+const _TC = (typeof window !== 'undefined' && window._TC) || { strength: '#7EC8E3', cardio: '#FF8C69', rest: '#D4C8B4', mixed: '#C5A3FF' };
+const _TL = (typeof window !== 'undefined' && window._TL) || { strength: 'Fuerza', cardio: 'Cardio', rest: 'Descanso', mixed: 'Mixto' };
 
 function WeekChart2({ weekSummary, goalKcal }) {
   // Use the user's actual goal (with 10% headroom) to scale the chart. The
@@ -37,7 +44,7 @@ function WeekChart2({ weekSummary, goalKcal }) {
               )
             ),
             React.createElement('div', { style: { fontSize: 10, fontWeight: isToday ? 800 : 600, color: isToday ? '#F5C030' : 'var(--color-muted, #9A8878)' } }, isToday ? 'Hoy' : d.day),
-            React.createElement('div', { style: { width: 8, height: 8, borderRadius: 999, background: TRAINING_COLORS[d.training] || '#D4C8B4' } })
+            React.createElement('div', { style: { width: 8, height: 8, borderRadius: 999, background: _TC[d.training] || '#D4C8B4' } })
           );
         })
       ),
@@ -64,9 +71,9 @@ function WeekChart2({ weekSummary, goalKcal }) {
       }, `${goal.toLocaleString()} kcal`)
     ),
     React.createElement('div', { style: { marginTop: 8, display: 'flex', gap: 12, flexWrap: 'wrap' } },
-      Object.entries(TRAINING_LABELS).map(([k, v]) =>
+      Object.entries(_TL).map(([k, v]) =>
         React.createElement('div', { key: k, style: { display: 'flex', alignItems: 'center', gap: 4 } },
-          React.createElement('div', { style: { width: 8, height: 8, borderRadius: 999, background: TRAINING_COLORS[k] } }),
+          React.createElement('div', { style: { width: 8, height: 8, borderRadius: 999, background: _TC[k] } }),
           React.createElement('span', { style: { fontSize: 10, color: 'var(--color-muted, #9A8878)' } }, v)
         )
       )
@@ -107,8 +114,8 @@ function NextWeekGoals({ goals, onChange }) {
     goals.map((g, i) =>
       React.createElement('div', { key: g.day, style: { display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: i < goals.length - 1 ? '1px solid var(--border-color, #F5EFE4)' : 'none' } },
         React.createElement('div', { style: { width: 28, textAlign: 'center', fontSize: 12, fontWeight: 600, color: 'var(--color-sub, #7A6652)' } }, g.day),
-        React.createElement('div', { style: { width: 8, height: 8, borderRadius: 999, background: TRAINING_COLORS[g.type] || '#D4C8B4', flexShrink: 0 } }),
-        React.createElement('div', { style: { flex: 1, fontSize: 12, color: 'var(--color-muted, #9A8878)' } }, TRAINING_LABELS[g.type] || g.type),
+        React.createElement('div', { style: { width: 8, height: 8, borderRadius: 999, background: _TC[g.type] || '#D4C8B4', flexShrink: 0 } }),
+        React.createElement('div', { style: { flex: 1, fontSize: 12, color: 'var(--color-muted, #9A8878)' } }, _TL[g.type] || g.type),
         React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 6 } },
           React.createElement('button', {
             onClick: () => onChange(i, g.kcal - 50),
