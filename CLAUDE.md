@@ -1,181 +1,176 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guía para Claude Code trabajando en este repo.
 
-## Workflow After Code Changes
+## Workflow
 
-After every code modification, briefly explain what was changed (2-3 lines max). Then always ask:
-"¿Quieres que haga el push a GitHub?"
-- If the user says yes → run `git add`, `git commit`, and `git push`.
-- If the user says no → stop there.
+Tras cada cambio: explicar en 2-3 líneas y preguntar **"¿Quieres que haga el push a GitHub?"**.
+Si sí → `git add` + `git commit` + `git push`. Si no → parar.
 
-## Project Overview
+## Stack
 
-KCALIA is a mobile-first nutritional tracking web app built in React 18 (UMD via CDN). It runs directly in the browser — no build system, no npm, no compilation step. It is also installable as a PWA (manifest + service worker).
+- React 18 UMD vía CDN — sin build, sin npm, sin compilación.
+- PWA instalable (manifest + service worker).
+- Lenguaje único: `.jsx` cargados como `<script>` planos.
 
-## Running the App
+**Correr**: abrir `index.html` directo, o servir por HTTP (el SW requiere `http(s)://`, no `file://`). No hay lint, test, ni build. La única verificación programática usada hasta hoy fue Node + jsdom ad-hoc.
 
-Open `index.html` in a browser, or serve the folder over HTTP (the service worker requires `http(s)://`, not `file://`). No build required. For development, edit `.jsx` files and refresh the browser.
+## Arquitectura
 
-There are no lint, test, or build commands configured. The only programmatic verification used so far has been ad-hoc Node + jsdom render tests done outside the repo.
+### Carga de scripts
 
-## Architecture
+`index.html` carga React desde `unpkg.com` y luego cada `.jsx` como `<script src>`. Cada archivo expone su API mutando `window` (`Object.assign(window, { Dashboard })`). `App()` y `ScreenErrorBoundary` viven en el `<script>` inline al final de `index.html`.
 
-### Entry Point & Module System
+⚠️ **Gotcha de colisión de identifiers.** Todos los `<script>` comparten el mismo top-level lexical scope. Dos `const X` (o `let X`) con el mismo nombre en archivos distintos lanzan `SyntaxError` que aborta el segundo archivo entero — `window.X` nunca se asigna y la pantalla que lo usa queda en blanco. Pasó con `TRAINING_COLORS`/`TRAINING_LABELS` (causa del "weekly en blanco"). Para referenciar constantes compartidas: leer `window.X` o renombrar localmente (`_TC`).
 
-`index.html` is the single entry point. It loads React (production builds) from `unpkg.com`, then loads each `.jsx` file as a plain `<script>` tag. Each file exposes its public surface by mutating `window` directly (e.g. `Object.assign(window, { Dashboard })`). The root `App()` function and the `ScreenErrorBoundary` class are defined in the inline script at the bottom of `index.html`.
+### Estado y persistencia
 
-**Identifier-collision gotcha.** All `<script src=...>` tags share the same top-level lexical scope. Two top-level `const X` (or `let X`) declarations across different files with the same name produce `SyntaxError: Identifier 'X' has already been declared`, which aborts the entire second file — `window.X` then never gets assigned and any screen that depends on it renders blank. This actually happened with `TRAINING_COLORS`/`TRAINING_LABELS` (both declared in `Constants.jsx` and re-declared in `WeeklyAnalysis.jsx`), and was the root cause of the long-standing "weekly analysis goes blank" bug. When you need to reference a shared constant from another file, either read from `window.X` directly or declare under a different name (e.g. `_TC`).
+Todo el estado vive en `App()` con `useState`/`useEffect`. Sin Context, sin Redux — props down.
 
-### State Management
+- `localStorage['kcalia_v1']` con envelope `{ _v: 3, data }`.
+- `saveState()` debounced 500 ms. Si tira por quota, reintenta con snapshot agresivamente podado.
+- `loadState()` desempaca envelope, migra fechas legacy (`Date.toDateString()` → `YYYY-MM-DD`), poda entries > 6 meses.
 
-All global state lives in `App()` in `index.html`, managed with `useState`/`useEffect`. State is persisted to `localStorage` under the key `kcalia_v1` via `loadState()` / `saveState()`, debounced 500 ms to avoid writing on every keystroke. There is no Context API or Redux — state is passed as props.
-
-Schema is versioned (`SCHEMA_VERSION = 3`) and the envelope is `{ _v, data }`. `loadState()` unwraps the envelope, runs `_migrateDates()` (converts legacy `Date.toDateString()` strings to `YYYY-MM-DD` local-date keys), and prunes entries older than 6 months from `dailyLog` / `waterLog`. If `localStorage.setItem` throws (quota), `saveState` retries with an aggressively pruned snapshot.
-
-### Key State Shapes
+### Shapes de datos
 
 ```js
-// User profile (filled by Onboarding, editable from Profile)
-userData = {
-  name, age, sex,                         // basics
-  weight, targetWeight, height,           // measurements
-  goal,                                   // 'lose_fat' | 'gain_muscle' | 'maintain' | 'performance'
-  activity, lifestyle,                    // see Constants.jsx for valid keys
-  routine,                                // { Lun: 'strength'|'cardio'|'mixed'|'rest', ... Dom: ... }
-  personalGoal,                           // optional free-text motivation
-}
+userData = { name, age, sex, weight, targetWeight, height,
+             goal,          // lose_fat | gain_muscle | maintain | performance
+             activity, lifestyle,
+             routine,       // { Lun:'strength'|'cardio'|'mixed'|'rest', ... Dom }
+             personalGoal }
 
-// Nutritional targets
 dailyGoals = { kcal, protein, fat, carbs, sugar }
 
-// Meal entries (all days merged in one array, sorted by insertion order)
-dailyLog = [{ id, createdAt, date, time, name, foods: [...], totalKcal, totalProtein, totalFat, totalCarbs, totalSugar }]
-// date is 'YYYY-MM-DD' local-date key (see Constants.localDateKey)
-// createdAt is ms epoch — preferred over parsing id for "what hour was this?" logic
+dailyLog = [{ id, createdAt, date, time, name, foods,
+              totalKcal, totalProtein, totalFat, totalCarbs, totalSugar }]
+// date: 'YYYY-MM-DD' local (Constants.localDateKey)
+// createdAt: ms epoch — preferir sobre parsear id
 
-// Water tracking
-waterLog = [{ id, date, ml, time }]
-waterGoal = 2000                  // ml; user-configurable
-waterPresets = null | [{ label, ml, icon }]   // custom quick-add chips
+waterLog    = [{ id, date, ml, time }]
+waterGoal   = 2000                                  // ml
+waterPresets = null | [{ label, ml, icon }]
 
-// Consumption limits (arbitrary "max N per day/week" for items like energy drinks)
-consumptionLimits = [{ id, icon, name, limit, period: 'daily'|'weekly' }]
+consumptionLimits = [{ id, icon, name, limit, period:'daily'|'weekly' }]
 consumptionLog    = [{ id, limitId, date }]
 
-// Notifications
 notifications = [{ id, type, subtype, title, message, action?, timestamp, read }]
-notifPrefs    = { enabled, mealReminders, waterReminders, goalAlerts, weeklyReports, motivation, tips }
+notifPrefs    = { enabled, mealReminders, waterReminders,
+                  goalAlerts, weeklyReports, motivation, tips }
 
-// Theme
 darkTheme = boolean
 
-// localStorage envelope
-{ _v: 3, data: { userData, dailyGoals, dailyLog, foodLibrary, notifications, notifPrefs,
-                 waterLog, waterGoal, waterPresets, consumptionLimits, consumptionLog, darkTheme } }
+// envelope
+{ _v: 3, data: { userData, dailyGoals, dailyLog, foodLibrary,
+                 notifications, notifPrefs,
+                 waterLog, waterGoal, waterPresets,
+                 consumptionLimits, consumptionLog, darkTheme } }
 ```
 
-### Component Files
+### Layout + theming
 
-| File | Role |
-|------|------|
-| `Constants.jsx` | Theme tokens, label maps, helpers (`localDateKey`, `getWeekStartKey`, `computeNutritionTargets`, `normalizeText`, `uniqueId`, `useEscapeKey`, `useBodyClass`, `useMediaQuery`, `useIsMobile`) |
-| `AppShell.jsx` | Phone shell, status bar, bottom nav, shared `Icon`/`IconButton` |
-| `Dashboard.jsx` | Today's intake: calorie ring, macros, meal list, water + consumption trackers |
-| `WaterTracker.jsx` | Water card on the dashboard (compact + expanded states, custom presets) |
-| `AddMeal.jsx` | Food search → quantity picker → cart → log meal (also handles meal editing) |
-| `Progress.jsx` | Weekly bar chart, history list, trend stats |
-| `WeeklyAnalysis.jsx` | Deeper weekly analytics, auto-generated insights, next-week goal suggestions |
-| `Profile.jsx` | Profile data, goal/activity/routine editing, notif prefs, theme, data export/import, logout |
-| `Onboarding.jsx` | 7-step first-time setup flow |
-| `FoodLibrary.jsx` | Custom food library + local DB browser, manual add, autocomplete from local DB |
-| `Notifications.jsx` | Notification center, settings sheet, and `generateAppNotifications()` engine |
+- Desktop: mockup 390×844 con sombra y bordes redondeados.
+- Mobile (`max-width: 600px`): full-screen, safe-area insets.
+- Detección via hook reactivo `useIsMobile()` (matchMedia). Existe `_isMobile()` legacy para contextos no-hook.
+- Dark mode: `darkTheme` toggle clase `dark` en `body`. Paleta como CSS vars en `:not(.dark)` y `.dark`. Componentes deben usar `var(--accent-*, #fallback)`, no hex. Script en `<head>` aplica la clase pre-mount para evitar flash.
 
-Navigation is a 5-tab bottom bar (Dashboard / Progress / + (FAB) / Library / Profile). Fullscreen routes (`onboarding`, `add`, `weekly`, `notifications`) replace the bottom nav with a back button.
+## Componentes
 
-### Nutrition Database
+| Archivo | Rol |
+|---|---|
+| `Constants.jsx` | Tokens, label maps, helpers: `localDateKey`, `getWeekStartKey`, `computeNutritionTargets`, `normalizeText`, `uniqueId`, `useEscapeKey`, `useBodyClass`, `useMediaQuery`, `useIsMobile` |
+| `AppShell.jsx` | Phone shell, status bar, bottom nav, `Icon`/`IconButton` |
+| `Dashboard.jsx` | Anillo de kcal, macros, lista de comidas, trackers de agua y consumo |
+| `WaterTracker.jsx` | Card de agua (compact/expanded, presets editables) |
+| `AddMeal.jsx` | Búsqueda → cantidad → carrito → registrar (también edita) |
+| `Progress.jsx` | Gráfico semanal, historial, métricas |
+| `WeeklyAnalysis.jsx` | Análisis profundo + sugerencias semana siguiente |
+| `Profile.jsx` | Perfil, metas, rutina, prefs, theme, export/import, logout |
+| `Onboarding.jsx` | Flujo inicial de 7 pasos |
+| `FoodLibrary.jsx` | Biblioteca custom + DB local + manual add + autocomplete |
+| `Notifications.jsx` | Centro de notificaciones + settings + `generateAppNotifications()` |
 
-An embedded `NUTRITION_DB` array (~130 foods) lives in `FoodLibrary.jsx` and is exposed via `window.DB_FOODS`. Two unit types:
-- `unit: 'g'` — per-gram values, scaled by quantity input
-- `unit: 'u'` — per-unit absolute values for discrete items (eggs, fruit, sandwiches)
+Navegación: 5 tabs (Dashboard / Progress / + (FAB) / Library / Profile). Rutas fullscreen (`onboarding`, `add`, `weekly`, `notifications`) reemplazan la bottom nav con botón Volver.
 
-Each entry has an alias list (e.g. `['plátano', 'platano', 'banana', 'guineo', 'cambur']`) so users can find foods with whatever spelling/regionalism they know. Search is accent-insensitive via `normalizeText()`.
+## Subsistemas
 
-### Local Nutrition Lookup (formerly "AI lookup")
+### Base de alimentos
 
-`FoodLibrary.jsx`'s "Autocompletar" button calls `findFoodInDB()`, which is a **local** tokenized fuzzy match against `NUTRITION_DB`:
-1. Reject queries shorter than 3 chars.
-2. Exact alias match wins immediately.
-3. Otherwise score by shared whole-word tokens, requiring ≥ 0.5 Jaccard-style coverage.
+`NUTRITION_DB` (~130 alimentos) en `FoodLibrary.jsx`, expuesta como `window.DB_FOODS`. Dos unidades:
+- `unit: 'g'` — valores por gramo, escalan con la cantidad.
+- `unit: 'u'` — valores absolutos por unidad (huevo, pieza de fruta, sándwich).
 
-This replaces an earlier substring-similarity heuristic with a 0.3 threshold that produced bad matches for short queries (`"te"` → `"tomate"`, `"pa"` → `"papaya"`). There is currently **no** call out to the Claude API or any other remote service — everything resolves from the bundled database. (`.claude/settings.local.json` still has WebFetch permission to `api.anthropic.com`, kept for possible future use.)
+Cada entrada tiene aliases (`['plátano','platano','banana','guineo','cambur']`). Búsqueda accent-insensitive via `normalizeText()`.
 
-### Notification Engine
+### Búsqueda local (no AI)
 
-`generateAppNotifications()` in `Notifications.jsx` is called once on app load and every 5 minutes thereafter while the tab is visible. The interval is paused on `visibilitychange` (hidden) and resumed when visible. It reads `todayMeals`, `dailyGoals`, `userData`, `todayWaterMl`, `waterGoal`, and `notifPrefs` to push reminders, alerts, motivation, weekly reports, and tips into the `notifications` array (capped at 50).
+`findFoodInDB()` en `FoodLibrary.jsx` — match fuzzy **local**, sin llamadas remotas:
+1. Rechaza queries < 3 chars.
+2. Match exacto de alias gana.
+3. Sino, score por tokens compartidos completos con cobertura Jaccard ≥ 0.5.
 
-Notification categories (each has its own pref toggle):
-- `mealReminders` — breakfast/lunch/dinner nags, detect existing meals by hour-of-`createdAt`, not by name
-- `waterReminders` — hydration target vs. proportional time-of-day expected progress (separate toggle, so users can mute meal nags without losing water nudges)
-- `goalAlerts` — over/near calorie goal, protein milestone
-- `weeklyReports` — Mondays
-- `motivation` — random message if user has logged anything this week
-- `tips` — daily nutrition tip (deterministic by date)
+Reemplaza heurística vieja (substring + ratio 0.3) que producía falsos positivos (`"te"` → `"tomate"`). `.claude/settings.local.json` aún tiene permiso WebFetch a `api.anthropic.com` por si se reactiva más adelante.
 
-Deduplication: each notification has a `subtype` and is suppressed for a category-specific window (typically 3–24 hours).
+### Motor de notificaciones
 
-### Responsive Layout
+`generateAppNotifications()` corre al montar y cada 5 min mientras la pestaña está visible (pausa en `visibilitychange:hidden`). Lee `todayMeals`, `dailyGoals`, `userData`, `todayWaterMl`, `waterGoal`, `notifPrefs` y empuja al array `notifications` (cap 50).
 
-- Desktop: 390 × 844 px iPhone-like mockup centered with shadow and rounded corners
-- Mobile (`max-width: 600px`): full-screen, safe-area insets applied
-- Detection via `useIsMobile()` hook (built on `window.matchMedia`) so rotation / resize re-renders correctly. The legacy `_isMobile()` predicate is still exported for non-hook contexts but new code should use the hook.
+Categorías (cada una con toggle propio en `notifPrefs`):
 
-### Theming (Light + Dark)
+| Toggle | Qué hace |
+|---|---|
+| `mealReminders` | Recordatorios desayuno/almuerzo/cena. Detecta comidas por hora de `createdAt`, no por nombre. |
+| `waterReminders` | Hidratación vs. progreso proporcional al momento del día. Toggle separado para silenciar comidas sin perder agua. |
+| `goalAlerts` | Cerca/sobre meta kcal, hito de proteína. |
+| `weeklyReports` | Lunes. |
+| `motivation` | Mensaje random si hay algo logueado esta semana. |
+| `tips` | Tip nutricional diario (determinístico por fecha). |
 
-Theme is driven by a single boolean `darkTheme` in `App()`. A class `dark` is toggled on `document.body`; `index.html` defines the full palette as CSS custom properties under `body:not(.dark)` and `body.dark`. Components should consume colors as `var(--accent-gold-soft, #FFF3C4)` rather than hard-coding hex, so dark-mode darkens the surface automatically. The `<head>` runs an early script that reads `darkTheme` from `kcalia_v1` and applies the class before React mounts, avoiding a flash.
+Dedup: cada notificación tiene `subtype`; se suprime en ventana de 3-24h según categoría.
 
-### Error Handling
+### Error boundary
 
-`ScreenErrorBoundary` (class component in `index.html`) wraps `renderContent()`. If a screen throws during render in production builds, React would otherwise silently unmount the subtree — fullscreen routes like `weekly` would just go blank with no way back. The boundary renders a fallback with two recovery actions: "Volver al inicio" (navigate dashboard) and "Recargar" (reload). It auto-resets when `screen` changes.
+`ScreenErrorBoundary` (en `index.html`) envuelve `renderContent()`. En production React desmonta silenciosamente el subtree si algo throw — la ruta fullscreen quedaba en blanco. El boundary muestra fallback con "Volver al inicio" y "Recargar". Se auto-resetea al cambiar `screen`.
 
-### Data Export / Import
+### Export/import de datos
 
-Profile → "Tus datos" lets users:
-- **Export** a JSON snapshot of the full state envelope (`{ _v, exportedAt, data }`) as `kcalia-backup-YYYY-MM-DD.json`.
-- **Import** that JSON back, with a confirm-modal warning that current data will be replaced. The import accepts both the v3 envelope and a raw data object (so manual edits / older backups still load).
+Profile → "Tus datos":
+- **Export**: descarga `kcalia-backup-YYYY-MM-DD.json` con `{ _v, exportedAt, data }`.
+- **Import**: confirma reemplazo, acepta envelope v3 o data raw (compat con backups manuales/viejos).
 
 ### Service Worker / PWA
 
-`sw.js` registers an offline-first cache (current version `kcalia-v13`). App-code files (HTML/JSX) use a **network-first** strategy so users get fresh code when online; CDN resources (React, Google Fonts) are **cache-first** since they're URL-versioned. The SW deletes old caches on `activate`. The registration script in `index.html` listens for `updatefound`, fires a custom `kcalia-sw-update` event, and `App()` shows an "✨ Nueva versión disponible" banner with a reload button.
+`sw.js` cache offline-first (actual: `kcalia-v13`).
+- App code (HTML/JSX): **network-first** (siempre fresco si hay red).
+- CDN (React, fonts): **cache-first** (URL-versioned).
+- SW borra caches viejas en `activate`.
+- `index.html` escucha `updatefound`, dispara `kcalia-sw-update`, `App()` muestra banner "✨ Nueva versión" con botón recargar.
 
-**Bump `CACHE` in `sw.js` whenever any JSX/HTML changes** so users pick up new code on their next visit. (Recent versions: v9 → v10 production-React migration, v11 weekly analysis UX, v12 ErrorBoundary, v13 weekly analysis crash fix.)
+⚠️ **Bumpear `CACHE` en `sw.js` con cada cambio de JSX/HTML**, sino los PWA users quedan en la versión vieja.
 
-### Icons
+## Accesibilidad
 
-SVG icons are defined as functions returning HTML strings in an `ICONS` object in `AppShell.jsx` and rendered with `dangerouslySetInnerHTML`. The `Icon` component wraps the lookup and the `IconButton` component provides a 44×44 accessible tap target around any icon.
+- Controles custom (selectores, toggles, badges) son `<button type="button">`.
+- Selectores en Onboarding/Profile: `role="radiogroup"` con hijos `role="radio"` + `aria-checked`.
+- `ToggleSwitch`: `role="switch"` + `aria-checked` + `aria-label`.
+- Bottom nav: `aria-current="page"` solo en tabs reales (no FAB).
+- Modales: `useEscapeKey()` compartido.
 
-### Accessibility
+## Tareas comunes
 
-- All custom controls (selectors, toggles, badges) are `<button>` elements with `type="button"`. Onboarding/Profile selectors use `role="radio"` + `aria-checked` grouped under `role="radiogroup"`.
-- `ToggleSwitch` is `role="switch"` + `aria-checked` with an `aria-label`.
-- Bottom-nav tabs set `aria-current="page"` only on real navigable tabs (not the FAB).
-- Modals listen for Escape via the shared `useEscapeKey()` hook.
+### Agregar alimento a la DB
+Editar `NUTRITION_DB` en `FoodLibrary.jsx`. Formato: `{ n:['name','alias1',...], k, p, f, c, s, u }`. Si `u:'g'` los macros son por **1 gramo**; si `u:'u'` son por **1 unidad**.
 
-## Common Tasks
+### Agregar tipo de notificación
+1. Añadir clave a `DEFAULT_NOTIF_PREFS` (default `true`).
+2. Bloque en `generateAppNotifications()` guardado por `prefs.<key>`.
+3. Fila en `sections` de `NotificationSettingsSheet`.
+4. El merge `{ ...DEFAULT_NOTIF_PREFS, ...saved.notifPrefs }` en `App()` garantiza que usuarios upgrade reciban el toggle on.
 
-### Adding a food to the database
-Edit `NUTRITION_DB` in `FoodLibrary.jsx`. Format: `{ n: ['name', 'alias1', ...], k, p, f, c, s, u }` where `u` is `'g'` (per-gram) or `'u'` (per-unit). For `'g'` entries `k/p/f/c/s` are per **1 gram**; for `'u'` they are per **1 unit**.
+### Migrar schema localStorage
+1. Bump `SCHEMA_VERSION` en `index.html`.
+2. Paso de migración en `loadState()` (ver patrón `_migrateDates`).
+3. Probar fresh-install y data existente.
 
-### Adding a new notification type
-1. Add to `DEFAULT_NOTIF_PREFS` in `Notifications.jsx` (default true).
-2. Add a generation block in `generateAppNotifications()` guarded by `prefs.<yourKey>`.
-3. Add a row in the `sections` array inside `NotificationSettingsSheet` so users can toggle it.
-4. The merge `{ ...DEFAULT_NOTIF_PREFS, ...saved.notifPrefs }` in `App()` ensures upgrading users get the new toggle on by default.
-
-### Changing the localStorage schema
-1. Bump `SCHEMA_VERSION` in `index.html`.
-2. Add a migration step in `loadState()` (look at `_migrateDates` for the pattern).
-3. Test with both fresh-install and existing-data localStorage.
-
-### After any code change
-Bump `CACHE` in `sw.js`. Otherwise PWA users will keep loading the previous cached version.
+### Después de cualquier cambio
+Bump `CACHE` en `sw.js`.
