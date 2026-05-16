@@ -1,5 +1,8 @@
 // AppShell.jsx — Layout shell, status bar, bottom navigation
 
+// Non-reactive snapshot. Kept around for code paths that don't have a hook
+// (legacy callers). New code should use useIsMobile() so layout responds to
+// rotation/resize without waiting for an unrelated re-render.
 const _isMobile = () => window.innerWidth <= 600;
 
 const ICONS = {
@@ -81,13 +84,15 @@ function StatusBar() {
 }
 
 function StatusBarSpacer() {
-  if (!_isMobile()) return null;
+  const mobile = useIsMobile();
+  if (!mobile) return null;
   return React.createElement('div', {
     style: { height: 'env(safe-area-inset-top, 0px)', background: 'var(--bg-main, #FEFAF3)', flexShrink: 0 }
   });
 }
 
 function BottomNav({ screen, onNavigate }) {
+  const mobile = useIsMobile();
   const tabs = [
     { id: 'dashboard', label: 'Inicio', icon: 'home' },
     { id: 'progress',  label: 'Progreso', icon: 'chart' },
@@ -100,7 +105,7 @@ function BottomNav({ screen, onNavigate }) {
     className: 'kcalia-bottom-nav',
     style: {
       background: 'var(--bg-card, white)', boxShadow: '0 -1px 0 rgba(30,20,8,0.06)',
-      display: 'flex', padding: _isMobile() ? '8px 0 calc(8px + env(safe-area-inset-bottom, 12px))' : '8px 0 20px', flexShrink: 0,
+      display: 'flex', padding: mobile ? '8px 0 calc(8px + env(safe-area-inset-bottom, 12px))' : '8px 0 20px', flexShrink: 0,
       overflow: 'visible', position: 'relative', zIndex: 10,
     }
   },
@@ -109,7 +114,10 @@ function BottomNav({ screen, onNavigate }) {
         key: tab.id,
         onClick: () => onNavigate(tab.id === 'add' ? 'add' : tab.id),
         'aria-label': tab.label,
-        'aria-current': screen === tab.id ? 'page' : undefined,
+        // The "add" tab is a FAB that opens a modal flow rather than a real
+        // navigable page; advertising it as the current page misleads screen
+        // readers. Only mark real page tabs as current.
+        'aria-current': (tab.id !== 'add' && screen === tab.id) ? 'page' : undefined,
         type: 'button',
         style: {
           flex: 1, display: 'flex', flexDirection: 'column',
@@ -146,7 +154,7 @@ function BottomNav({ screen, onNavigate }) {
 }
 
 function AppShell({ screen, onNavigate, children }) {
-  const mobile = _isMobile();
+  const mobile = useIsMobile();
   return React.createElement('div', {
     className: 'phone-shell',
     style: {

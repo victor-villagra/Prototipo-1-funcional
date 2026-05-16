@@ -39,10 +39,13 @@ function EditRoutineSheet({ userData, onClose, onSave }) {
     ROUTINE_DAYS.map(day =>
       React.createElement('div', { key: day, style: { marginBottom: 10 } },
         React.createElement('div', { style: { fontSize: 13, fontWeight: 600, color: 'var(--color-sub, #5A4838)', marginBottom: 6 } }, day),
-        React.createElement('div', { style: { display: 'flex', gap: 6 } },
+        React.createElement('div', { style: { display: 'flex', gap: 6 }, role: 'radiogroup', 'aria-label': `Tipo de actividad para ${day}` },
           TYPES.map(t =>
-            React.createElement('div', {
+            React.createElement('button', {
               key: t.id,
+              type: 'button',
+              role: 'radio',
+              'aria-checked': routine[day] === t.id,
               onClick: () => setRoutine(r => ({ ...r, [day]: t.id })),
               style: {
                 flex: 1, padding: '8px 4px', borderRadius: 10, textAlign: 'center',
@@ -51,6 +54,7 @@ function EditRoutineSheet({ userData, onClose, onSave }) {
                 cursor: 'pointer', fontSize: 11, fontWeight: 600,
                 color: routine[day] === t.id ? T_COLORS[t.id] : 'var(--color-muted, #9A8878)',
                 transition: 'all 0.12s',
+                font: 'inherit',
               }
             }, t.label)
           )
@@ -95,35 +99,55 @@ function EditActivitySheet({ userData, onClose, onSave }) {
   },
     React.createElement('div', { style: { width: 36, height: 4, background: '#D4C8B4', borderRadius: 999, margin: '12px auto 16px' } }),
     React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 18, fontWeight: 800, color: 'var(--color-text, #1E1408)', marginBottom: 16 } }, 'Nivel de actividad'),
-    activityOptions.map(a =>
-      React.createElement('div', {
-        key: a.id, onClick: () => setActivity(a.id),
-        style: { border: `2px solid ${activity === a.id ? '#F5D040' : 'var(--border-color, #EAE0D0)'}`, background: activity === a.id ? '#FFF3C4' : 'var(--bg-card, white)', borderRadius: 14, padding: '11px 14px', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', transition: 'all 0.15s' }
-      },
-        React.createElement('div', null,
-          React.createElement('div', { style: { fontSize: 14, fontWeight: 600, color: 'var(--color-text, #1E1408)' } }, a.label),
-          React.createElement('div', { style: { fontSize: 11, color: 'var(--color-sub, #7A6652)', marginTop: 1 } }, a.desc)
-        ),
-        activity === a.id && React.createElement('div', { style: { width: 20, height: 20, borderRadius: 999, background: '#F5D040', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 } },
-          React.createElement('svg', { width: 11, height: 11, viewBox: '0 0 24 24', fill: 'none', stroke: '#1E1408', strokeWidth: 3, strokeLinecap: 'round', strokeLinejoin: 'round' },
-            React.createElement('polyline', { points: '20 6 9 17 4 12' })
+    React.createElement('div', { role: 'radiogroup', 'aria-label': 'Nivel de actividad' },
+      activityOptions.map(a =>
+        React.createElement('button', {
+          key: a.id, type: 'button', role: 'radio', 'aria-checked': activity === a.id,
+          onClick: () => setActivity(a.id),
+          style: {
+            width: '100%', textAlign: 'left',
+            border: `2px solid ${activity === a.id ? '#F5D040' : 'var(--border-color, #EAE0D0)'}`,
+            background: activity === a.id ? 'var(--accent-gold-soft, #FFF3C4)' : 'var(--bg-card, white)',
+            borderRadius: 14, padding: '11px 14px', marginBottom: 8,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            cursor: 'pointer', transition: 'all 0.15s', font: 'inherit', color: 'inherit',
+          }
+        },
+          React.createElement('div', null,
+            React.createElement('div', { style: { fontSize: 14, fontWeight: 600, color: 'var(--color-text, #1E1408)' } }, a.label),
+            React.createElement('div', { style: { fontSize: 11, color: 'var(--color-sub, #7A6652)', marginTop: 1 } }, a.desc)
+          ),
+          activity === a.id && React.createElement('div', { style: { width: 20, height: 20, borderRadius: 999, background: '#F5D040', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 } },
+            React.createElement('svg', { width: 11, height: 11, viewBox: '0 0 24 24', fill: 'none', stroke: '#1E1408', strokeWidth: 3, strokeLinecap: 'round', strokeLinejoin: 'round' },
+              React.createElement('polyline', { points: '20 6 9 17 4 12' })
+            )
           )
         )
       )
     ),
     React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--color-text, #1E1408)', margin: '16px 0 10px' } }, 'Estilo de vida diario'),
-    lifestyleOptions.map(l =>
-      React.createElement('div', {
-        key: l.id, onClick: () => setLifestyle(l.id),
-        style: { border: `2px solid ${lifestyle === l.id ? '#FFAB5E' : 'var(--border-color, #EAE0D0)'}`, background: lifestyle === l.id ? '#FFE5CC' : 'var(--bg-card, white)', borderRadius: 14, padding: '11px 14px', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', transition: 'all 0.15s' }
-      },
-        React.createElement('div', null,
-          React.createElement('div', { style: { fontSize: 14, fontWeight: 600, color: 'var(--color-text, #1E1408)' } }, l.label),
-          React.createElement('div', { style: { fontSize: 11, color: 'var(--color-sub, #7A6652)', marginTop: 1 } }, l.desc)
-        ),
-        lifestyle === l.id && React.createElement('div', { style: { width: 18, height: 18, borderRadius: 999, background: '#FFAB5E', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 } },
-          React.createElement('svg', { width: 10, height: 10, viewBox: '0 0 24 24', fill: 'none', stroke: 'white', strokeWidth: 3, strokeLinecap: 'round', strokeLinejoin: 'round' },
-            React.createElement('polyline', { points: '20 6 9 17 4 12' })
+    React.createElement('div', { role: 'radiogroup', 'aria-label': 'Estilo de vida diario' },
+      lifestyleOptions.map(l =>
+        React.createElement('button', {
+          key: l.id, type: 'button', role: 'radio', 'aria-checked': lifestyle === l.id,
+          onClick: () => setLifestyle(l.id),
+          style: {
+            width: '100%', textAlign: 'left',
+            border: `2px solid ${lifestyle === l.id ? '#FFAB5E' : 'var(--border-color, #EAE0D0)'}`,
+            background: lifestyle === l.id ? 'var(--accent-carbs-soft, #FFE5CC)' : 'var(--bg-card, white)',
+            borderRadius: 14, padding: '11px 14px', marginBottom: 8,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            cursor: 'pointer', transition: 'all 0.15s', font: 'inherit', color: 'inherit',
+          }
+        },
+          React.createElement('div', null,
+            React.createElement('div', { style: { fontSize: 14, fontWeight: 600, color: 'var(--color-text, #1E1408)' } }, l.label),
+            React.createElement('div', { style: { fontSize: 11, color: 'var(--color-sub, #7A6652)', marginTop: 1 } }, l.desc)
+          ),
+          lifestyle === l.id && React.createElement('div', { style: { width: 18, height: 18, borderRadius: 999, background: '#FFAB5E', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 } },
+            React.createElement('svg', { width: 10, height: 10, viewBox: '0 0 24 24', fill: 'none', stroke: 'white', strokeWidth: 3, strokeLinecap: 'round', strokeLinejoin: 'round' },
+              React.createElement('polyline', { points: '20 6 9 17 4 12' })
+            )
           )
         )
       )
@@ -139,6 +163,7 @@ function EditActivitySheet({ userData, onClose, onSave }) {
 }
 
 function GoalRow({ goal, onEdit }) {
+  const ValueTag = onEdit ? 'button' : 'span';
   return React.createElement('div', {
     style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--border-color, #F5EFE4)' }
   },
@@ -146,10 +171,12 @@ function GoalRow({ goal, onEdit }) {
       React.createElement('div', { style: { width: 10, height: 10, borderRadius: 999, background: goal.color, flexShrink: 0 } }),
       React.createElement('span', { style: { fontSize: 14, fontWeight: 500, color: 'var(--color-text, #1E1408)' } }, goal.label)
     ),
-    React.createElement('div', {
-      onClick: onEdit,
-      style: { background: goal.bg, borderRadius: 999, padding: '4px 12px', cursor: onEdit ? 'pointer' : 'default' }
-    },
+    React.createElement(ValueTag, Object.assign(
+      {
+        style: { background: goal.bg, borderRadius: 999, padding: '4px 12px', cursor: onEdit ? 'pointer' : 'default', border: 'none', font: 'inherit' },
+      },
+      onEdit ? { type: 'button', onClick: onEdit, 'aria-label': `Editar meta de ${goal.label}` } : {}
+    ),
       React.createElement('span', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 14, fontWeight: 700, color: '#5A4838' } }, `${goal.val} ${goal.unit}`)
     )
   );
@@ -187,14 +214,28 @@ function EditGoalsSheet({ goals, waterGoal, onClose, onSave }) {
           }, '−'),
           React.createElement('input', {
             type: 'number',
-            value: values[f.key] !== undefined && values[f.key] !== null ? values[f.key] : 0,
+            // Empty string is a legitimate transient state while the user
+            // edits — we display '' rather than snapping back to the minimum
+            // (which interrupted typing). Validation/clamp happens on save.
+            value: values[f.key] === '' || values[f.key] === undefined || values[f.key] === null ? '' : values[f.key],
             min: f.min, max: f.max,
             onChange: e => {
               const raw = e.target.value;
-              if (raw === '') { setValues(prev => ({ ...prev, [f.key]: f.min })); return; }
+              if (raw === '') { setValues(prev => ({ ...prev, [f.key]: '' })); return; }
               const v = parseFloat(raw);
-              if (isNaN(v) || v < 0 || v > f.max) return;
+              if (isNaN(v) || v < 0) return;
               setValues(prev => ({ ...prev, [f.key]: v }));
+            },
+            onBlur: () => {
+              // Clamp on blur: cleared/below-min snaps to min, above-max snaps to max.
+              setValues(prev => {
+                const cur = prev[f.key];
+                if (cur === '' || cur === undefined || cur === null || isNaN(cur)) {
+                  return { ...prev, [f.key]: f.min };
+                }
+                const clamped = Math.max(f.min, Math.min(f.max, cur));
+                return clamped === cur ? prev : { ...prev, [f.key]: clamped };
+              });
             },
             style: { flex: 1, textAlign: 'center', padding: '10px', borderRadius: 12, border: `1.5px solid ${f.color}44`, fontFamily: "'Nunito',sans-serif", fontSize: 18, fontWeight: 800, color: 'var(--color-text, #1E1408)', background: 'var(--bg-input, white)', outline: 'none' }
           }),
@@ -286,8 +327,11 @@ function EditProfileSheet({ userData, onClose, onSave }) {
               if (e.target.value === '') { update(f.key, ''); return; }
               const v = parseFloat(e.target.value);
               if (isNaN(v)) return;
-              // Allow typing values out of range but flag with errors instead of blocking input.
-              if (f.max !== null && v > f.max) return;
+              // Allow values out of range during typing — validate() catches
+              // them on save and renders an inline error. Blocking onChange
+              // silently swallowed valid edits like changing 200 → 250 (200 →
+              // 25 transient state was rejected as too small to be plausible
+              // for some fields, depending on min).
               update(f.key, v);
             } else {
               update(f.key, e.target.value.slice(0, 60));
@@ -453,14 +497,21 @@ function ConsumptionLimitsSheet({ limits, onClose, onSave }) {
   );
 }
 
-function ToggleSwitch({ active, onToggle }) {
-  return React.createElement('div', {
+function ToggleSwitch({ active, onToggle, label }) {
+  // Real <button> with role=switch so it announces correctly to screen readers
+  // and is keyboard-operable (Space/Enter activate it like any button).
+  return React.createElement('button', {
+    type: 'button',
+    role: 'switch',
+    'aria-checked': active,
+    'aria-label': label,
     onClick: onToggle,
     style: {
       width: 44, height: 24, borderRadius: 999, cursor: 'pointer',
       background: active ? '#F5D040' : '#D4C8B4',
       padding: 2, transition: 'background 0.2s ease',
       display: 'flex', alignItems: 'center',
+      border: 'none', flexShrink: 0,
     }
   },
     React.createElement('div', {
@@ -474,7 +525,7 @@ function ToggleSwitch({ active, onToggle }) {
   );
 }
 
-function Profile({ userData, dailyGoals, onUpdateGoals, onNavigate, onLogout, onUpdateUserData, notifPrefs, onUpdateNotifPrefs, waterGoal, onUpdateWaterGoal, darkTheme, onUpdateDarkTheme, consumptionLimits, onUpdateConsumptionLimits }) {
+function Profile({ userData, dailyGoals, onUpdateGoals, onNavigate, onLogout, onUpdateUserData, notifPrefs, onUpdateNotifPrefs, waterGoal, onUpdateWaterGoal, darkTheme, onUpdateDarkTheme, consumptionLimits, onUpdateConsumptionLimits, onExportData, onImportData }) {
   const [showEdit, setShowEdit] = React.useState(false);
   const [showEditProfile, setShowEditProfile] = React.useState(false);
   const [showEditActivity, setShowEditActivity] = React.useState(false);
@@ -482,12 +533,16 @@ function Profile({ userData, dailyGoals, onUpdateGoals, onNavigate, onLogout, on
   const [showNotifSettings, setShowNotifSettings] = React.useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false);
   const [showLimitsSheet, setShowLimitsSheet] = React.useState(false);
+  const [showImportConfirm, setShowImportConfirm] = React.useState(null); // pending File
+  const [dataMsg, setDataMsg] = React.useState(null); // { type: 'ok'|'err', text }
+  const fileInputRef = React.useRef(null);
 
-  const anyOverlayOpen = showLogoutConfirm || showEdit || showEditProfile || showEditActivity || showEditRoutine || showNotifSettings || showLimitsSheet;
+  const anyOverlayOpen = showLogoutConfirm || showEdit || showEditProfile || showEditActivity || showEditRoutine || showNotifSettings || showLimitsSheet || !!showImportConfirm;
 
   // Escape closes whichever overlay is open, top-first.
   useEscapeKey(() => {
     if (showLogoutConfirm)      setShowLogoutConfirm(false);
+    else if (showImportConfirm) setShowImportConfirm(null);
     else if (showLimitsSheet)   setShowLimitsSheet(false);
     else if (showEdit)          setShowEdit(false);
     else if (showEditProfile)   setShowEditProfile(false);
@@ -495,6 +550,42 @@ function Profile({ userData, dailyGoals, onUpdateGoals, onNavigate, onLogout, on
     else if (showEditRoutine)   setShowEditRoutine(false);
     else if (showNotifSettings) setShowNotifSettings(false);
   }, anyOverlayOpen);
+
+  // Auto-dismiss the export/import status banner after 4s so it doesn't
+  // linger forever after a successful action.
+  React.useEffect(() => {
+    if (!dataMsg) return;
+    const t = setTimeout(() => setDataMsg(null), 4000);
+    return () => clearTimeout(t);
+  }, [dataMsg]);
+
+  function handleExportClick() {
+    if (!onExportData) return;
+    const res = onExportData();
+    if (res && res.ok) setDataMsg({ type: 'ok', text: 'Exportación lista. Revisa tus descargas.' });
+    else setDataMsg({ type: 'err', text: (res && res.error) || 'No se pudo exportar.' });
+  }
+
+  function handleImportClick() {
+    if (fileInputRef.current) fileInputRef.current.click();
+  }
+
+  function onFilePicked(e) {
+    const file = e.target.files && e.target.files[0];
+    // Reset the input so picking the same file twice still triggers onChange.
+    e.target.value = '';
+    if (!file) return;
+    setShowImportConfirm(file);
+  }
+
+  async function confirmImport() {
+    const file = showImportConfirm;
+    setShowImportConfirm(null);
+    if (!file || !onImportData) return;
+    const res = await onImportData(file);
+    if (res && res.ok) setDataMsg({ type: 'ok', text: 'Datos importados correctamente.' });
+    else setDataMsg({ type: 'err', text: (res && res.error) || 'No se pudo importar el archivo.' });
+  }
 
   // Hide the bottom nav while any sheet/modal is up so the FAB doesn't
   // overlap the sheet's action buttons.
@@ -535,8 +626,8 @@ function Profile({ userData, dailyGoals, onUpdateGoals, onNavigate, onLogout, on
     ),
     // Profile card
     React.createElement('div', { style: { margin: '0 16px 14px', background: 'var(--bg-card, white)', borderRadius: 20, padding: '20px 16px', boxShadow: '0 2px 12px rgba(30,20,8,0.08)', display: 'flex', alignItems: 'center', gap: 16 } },
-      React.createElement('div', { style: { width: 64, height: 64, borderRadius: 999, background: '#FFF3C4', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 } },
-        React.createElement('span', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 22, fontWeight: 900, color: '#F5C030' } }, initials || 'KC')
+      React.createElement('div', { style: { width: 64, height: 64, borderRadius: 999, background: 'var(--accent-gold-soft, #FFF3C4)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 } },
+        React.createElement('span', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 22, fontWeight: 900, color: 'var(--accent-gold, #F5C030)' } }, initials || 'KC')
       ),
       React.createElement('div', { style: { flex: 1 } },
         React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 18, fontWeight: 800, color: 'var(--color-text, #1E1408)' } }, name),
@@ -548,16 +639,16 @@ function Profile({ userData, dailyGoals, onUpdateGoals, onNavigate, onLogout, on
           [weight && `Actual: ${weight} kg`, targetWeight && `Meta: ${targetWeight} kg`].filter(Boolean).join(' → ')
         ),
         React.createElement('div', { style: { marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' } },
-          goalKey && React.createElement('div', { style: { background: '#FFF3C4', borderRadius: 999, padding: '3px 10px' } },
-            React.createElement('span', { style: { fontSize: 11, fontWeight: 600, color: '#9A6D00' } }, GOAL_LABELS_MAP[goalKey] || goalKey)
+          goalKey && React.createElement('div', { style: { background: 'var(--accent-gold-soft, #FFF3C4)', borderRadius: 999, padding: '3px 10px' } },
+            React.createElement('span', { style: { fontSize: 11, fontWeight: 600, color: 'var(--accent-gold-text, #9A6D00)' } }, GOAL_LABELS_MAP[goalKey] || goalKey)
           ),
           activity && React.createElement('button', {
             onClick: () => setShowEditActivity(true),
             'aria-label': `Editar nivel de actividad: ${ACTIVITY_MAP[activity] || activity}`,
             type: 'button',
-            style: { background: '#D8F5DB', borderRadius: 999, padding: '8px 14px', cursor: 'pointer', border: 'none', font: 'inherit', minHeight: 36 }
+            style: { background: 'var(--accent-success-soft, #D8F5DB)', borderRadius: 999, padding: '8px 14px', cursor: 'pointer', border: 'none', font: 'inherit', minHeight: 36 }
           },
-            React.createElement('span', { style: { fontSize: 11, fontWeight: 600, color: '#1F5F2A' } }, (ACTIVITY_MAP[activity] || activity) + ' ✎')
+            React.createElement('span', { style: { fontSize: 11, fontWeight: 600, color: 'var(--accent-success-text, #1F5F2A)' } }, (ACTIVITY_MAP[activity] || activity) + ' ✎')
           )
         )
       )
@@ -580,7 +671,7 @@ function Profile({ userData, dailyGoals, onUpdateGoals, onNavigate, onLogout, on
         React.createElement('button', {
           onClick: () => setShowLimitsSheet(true),
           type: 'button',
-          style: { fontSize: 13, fontWeight: 600, color: '#9A6D00', background: '#FFF3C4', border: 'none', borderRadius: 999, padding: '8px 16px', minHeight: 36, cursor: 'pointer' }
+          style: { fontSize: 13, fontWeight: 600, color: 'var(--accent-gold-text, #9A6D00)', background: 'var(--accent-gold-soft, #FFF3C4)', border: 'none', borderRadius: 999, padding: '8px 16px', minHeight: 36, cursor: 'pointer' }
         }, 'Configurar')
       ),
       (!consumptionLimits || consumptionLimits.length === 0)
@@ -606,7 +697,7 @@ function Profile({ userData, dailyGoals, onUpdateGoals, onNavigate, onLogout, on
         React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--color-text, #1E1408)' } }, 'Mis metas diarias'),
         React.createElement('button', {
           onClick: () => setShowEdit(true),
-          style: { fontSize: 13, fontWeight: 600, color: '#9A6D00', background: '#FFF3C4', border: 'none', borderRadius: 999, padding: '8px 16px', minHeight: 36, cursor: 'pointer' }
+          style: { fontSize: 13, fontWeight: 600, color: 'var(--accent-gold-text, #9A6D00)', background: 'var(--accent-gold-soft, #FFF3C4)', border: 'none', borderRadius: 999, padding: '8px 16px', minHeight: 36, cursor: 'pointer' }
         }, 'Editar')
       ),
       displayGoals.map((g, i) => React.createElement(GoalRow, { key: i, goal: g }))
@@ -678,8 +769,8 @@ function Profile({ userData, dailyGoals, onUpdateGoals, onNavigate, onLogout, on
       },
         React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 8 } },
           React.createElement('span', { style: { fontSize: 14, fontWeight: 500, color: 'var(--color-text, #1E1408)' } }, 'Notificaciones'),
-          React.createElement('div', { style: { background: notifEnabled ? '#D8F5DB' : '#FFE0E0', borderRadius: 999, padding: '1px 8px' } },
-            React.createElement('span', { style: { fontSize: 10, fontWeight: 600, color: notifEnabled ? '#2A7D3A' : '#C03030' } }, notifEnabled ? 'Activas' : 'Desactivadas')
+          React.createElement('div', { style: { background: notifEnabled ? 'var(--accent-success-soft, #D8F5DB)' : 'var(--accent-danger-soft, #FFE0E0)', borderRadius: 999, padding: '1px 8px' } },
+            React.createElement('span', { style: { fontSize: 10, fontWeight: 600, color: notifEnabled ? 'var(--accent-success-text, #2A7D3A)' : 'var(--accent-danger-text, #C03030)' } }, notifEnabled ? 'Activas' : 'Desactivadas')
           )
         ),
         React.createElement('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: '#B8A898', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' },
@@ -691,8 +782,45 @@ function Profile({ userData, dailyGoals, onUpdateGoals, onNavigate, onLogout, on
         style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 0' }
       },
         React.createElement('span', { style: { fontSize: 14, fontWeight: 500, color: 'var(--color-text, #1E1408)' } }, 'Tema oscuro'),
-        React.createElement(ToggleSwitch, { active: darkTheme, onToggle: toggleTheme })
+        React.createElement(ToggleSwitch, { active: darkTheme, onToggle: toggleTheme, label: 'Tema oscuro' })
       )
+    ),
+    // Data export / import card. Sits above logout because losing your
+    // data is the kind of thing you want a recoverable path out of, and
+    // because backing up before resetting is the natural mental order.
+    React.createElement('div', { style: { margin: '0 16px 14px', background: 'var(--bg-card, white)', borderRadius: 20, padding: '16px 18px', boxShadow: '0 2px 12px rgba(30,20,8,0.07)' } },
+      React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 } },
+        React.createElement('span', { style: { fontSize: 16 } }, '💾'),
+        React.createElement('div', { style: { fontFamily: "'Nunito',sans-serif", fontSize: 16, fontWeight: 700, color: 'var(--color-text, #1E1408)' } }, 'Tus datos')
+      ),
+      React.createElement('div', { style: { fontSize: 12, color: 'var(--color-sub, #7A6652)', marginBottom: 12, lineHeight: 1.5 } },
+        'Tus datos se guardan localmente en este dispositivo. Exporta una copia para respaldar tu progreso o moverlo a otro dispositivo.'
+      ),
+      React.createElement('div', { style: { display: 'flex', gap: 8 } },
+        React.createElement('button', {
+          onClick: handleExportClick, type: 'button',
+          style: { flex: 1, background: 'var(--accent-gold-soft, #FFF3C4)', border: 'none', borderRadius: 12, padding: '11px', fontFamily: "'DM Sans',sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--accent-gold-text, #9A6D00)', cursor: 'pointer', minHeight: 44 }
+        }, '↓ Exportar'),
+        React.createElement('button', {
+          onClick: handleImportClick, type: 'button',
+          style: { flex: 1, background: 'var(--bg-card2, #F5EFE4)', border: '1.5px solid var(--border-color, #EAE0D0)', borderRadius: 12, padding: '11px', fontFamily: "'DM Sans',sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--color-sub, #7A6652)', cursor: 'pointer', minHeight: 44 }
+        }, '↑ Importar')
+      ),
+      React.createElement('input', {
+        ref: fileInputRef,
+        type: 'file', accept: 'application/json,.json',
+        onChange: onFilePicked,
+        style: { display: 'none' },
+        'aria-hidden': 'true', tabIndex: -1,
+      }),
+      dataMsg && React.createElement('div', {
+        role: 'status',
+        style: {
+          marginTop: 10, padding: '8px 12px', borderRadius: 10, fontSize: 12, lineHeight: 1.4,
+          background: dataMsg.type === 'ok' ? 'var(--accent-success-soft, #D8F5DB)' : 'var(--accent-danger-soft, #FFE0E0)',
+          color: dataMsg.type === 'ok' ? 'var(--accent-success-text, #2A7D3A)' : 'var(--accent-danger-text, #C03030)',
+        }
+      }, dataMsg.text)
     ),
     React.createElement('div', { style: { margin: '0 16px' } },
       React.createElement('button', {
@@ -799,7 +927,31 @@ function Profile({ userData, dailyGoals, onUpdateGoals, onNavigate, onLogout, on
         if (onUpdateConsumptionLimits) onUpdateConsumptionLimits(newLimits);
         setShowLimitsSheet(false);
       }
-    })
+    }),
+    showImportConfirm && React.createElement('div', {
+      onClick: () => setShowImportConfirm(null),
+      style: { position: 'absolute', inset: 0, background: 'rgba(30,20,8,0.45)', zIndex: 70, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }
+    },
+      React.createElement('div', {
+        onClick: e => e.stopPropagation(),
+        role: 'alertdialog',
+        'aria-labelledby': 'import-title',
+        style: { background: 'var(--bg-card, white)', borderRadius: 20, padding: '22px 20px', maxWidth: 340, width: '100%', boxShadow: '0 16px 48px rgba(30,20,8,0.25)' }
+      },
+        React.createElement('div', { id: 'import-title', style: { fontFamily: "'Nunito',sans-serif", fontSize: 18, fontWeight: 800, color: 'var(--color-text, #1E1408)', marginBottom: 8 } }, '¿Importar datos?'),
+        React.createElement('div', { style: { fontSize: 14, color: 'var(--color-sub, #7A6652)', marginBottom: 18, lineHeight: 1.5 } }, `Se reemplazarán tus datos actuales con el contenido de "${showImportConfirm.name}". Esta acción no se puede deshacer.`),
+        React.createElement('div', { style: { display: 'flex', gap: 10 } },
+          React.createElement('button', {
+            onClick: () => setShowImportConfirm(null), type: 'button',
+            style: { flex: 1, padding: '13px', background: 'var(--bg-card, white)', border: '1.5px solid var(--border-color, #EAE0D0)', borderRadius: 999, fontFamily: "'DM Sans',sans-serif", fontSize: 14, fontWeight: 600, color: 'var(--color-sub, #5A4838)', cursor: 'pointer', minHeight: 44 }
+          }, 'Cancelar'),
+          React.createElement('button', {
+            onClick: confirmImport, type: 'button',
+            style: { flex: 1, padding: '13px', background: '#F5D040', border: 'none', borderRadius: 999, fontFamily: "'DM Sans',sans-serif", fontSize: 14, fontWeight: 600, color: '#1E1408', cursor: 'pointer', minHeight: 44, boxShadow: '0 2px 8px rgba(245,208,64,0.35)' }
+          }, 'Importar')
+        )
+      )
+    )
   );
 }
 

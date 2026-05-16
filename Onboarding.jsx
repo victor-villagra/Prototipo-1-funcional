@@ -142,17 +142,24 @@ function WelcomeStep({ onNext }) {
 function GoalStep({ data, setData, onNext, onBack }) {
   return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', height: '100%' } },
     React.createElement(StepHeader, { step: 0, total: 7, title: '¿Cuál es tu objetivo?', sub: 'Esto nos ayudará a calcular tus metas nutricionales.', onBack }),
-    React.createElement('div', { style: { flex: 1, overflowY: 'auto', padding: '0 24px' } },
+    React.createElement('div', { style: { flex: 1, overflowY: 'auto', padding: '0 24px' }, role: 'radiogroup', 'aria-label': 'Objetivo' },
       GOALS.map(g =>
-        React.createElement('div', {
-          key: g.id,
+        React.createElement('button', {
+          key: g.id, type: 'button', role: 'radio', 'aria-checked': data.goal === g.id,
           onClick: () => setData({ ...data, goal: g.id }),
-          style: { border: `2px solid ${data.goal === g.id ? g.border : '#EAE0D0'}`, background: data.goal === g.id ? g.color : 'white', borderRadius: 16, padding: '14px 16px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', transition: 'all 0.15s' }
+          style: {
+            width: '100%', textAlign: 'left',
+            border: `2px solid ${data.goal === g.id ? g.border : 'var(--border-color, #EAE0D0)'}`,
+            background: data.goal === g.id ? g.color : 'var(--bg-card, white)',
+            borderRadius: 16, padding: '14px 16px', marginBottom: 10,
+            display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer',
+            transition: 'all 0.15s', font: 'inherit', color: 'inherit',
+          }
         },
           React.createElement('div', { style: { fontSize: 28 } }, g.icon),
           React.createElement('div', null,
-            React.createElement('div', { style: { fontSize: 15, fontWeight: 600, color: '#1E1408' } }, g.label),
-            React.createElement('div', { style: { fontSize: 12, color: '#7A6652', marginTop: 2 } }, g.desc)
+            React.createElement('div', { style: { fontSize: 15, fontWeight: 600, color: 'var(--color-text, #1E1408)' } }, g.label),
+            React.createElement('div', { style: { fontSize: 12, color: 'var(--color-sub, #7A6652)', marginTop: 2 } }, g.desc)
           ),
           data.goal === g.id && React.createElement('div', { style: { marginLeft: 'auto', width: 22, height: 22, borderRadius: 999, background: g.border, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
             React.createElement('svg', { width: 12, height: 12, viewBox: '0 0 24 24', fill: 'none', stroke: 'white', strokeWidth: 3, strokeLinecap: 'round', strokeLinejoin: 'round' },
@@ -178,12 +185,20 @@ function PersonalStep({ data, setData, onNext, onBack }) {
         if (!isNaN(v) && v <= 110) setData({ ...data, age: v });
       }, suffix: 'años' }),
       React.createElement('div', { style: { marginBottom: 14 } },
-        React.createElement('div', { style: { fontSize: 13, fontWeight: 600, color: '#5A4838', marginBottom: 6 } }, 'Sexo'),
-        React.createElement('div', { style: { display: 'flex', gap: 10 } },
+        React.createElement('div', { style: { fontSize: 13, fontWeight: 600, color: 'var(--color-sub, #5A4838)', marginBottom: 6 } }, 'Sexo'),
+        React.createElement('div', { style: { display: 'flex', gap: 10 }, role: 'radiogroup', 'aria-label': 'Sexo' },
           ['Masculino', 'Femenino', 'Otro'].map(s =>
-            React.createElement('div', {
-              key: s, onClick: () => setData({ ...data, sex: s }),
-              style: { flex: 1, padding: '11px 8px', borderRadius: 12, border: `1.5px solid ${data.sex === s ? '#F5D040' : '#EAE0D0'}`, background: data.sex === s ? '#FFF3C4' : 'white', textAlign: 'center', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: data.sex === s ? '#9A6D00' : '#5A4838' }
+            React.createElement('button', {
+              key: s, type: 'button', role: 'radio', 'aria-checked': data.sex === s,
+              onClick: () => setData({ ...data, sex: s }),
+              style: {
+                flex: 1, padding: '11px 8px', borderRadius: 12,
+                border: `1.5px solid ${data.sex === s ? '#F5D040' : 'var(--border-color, #EAE0D0)'}`,
+                background: data.sex === s ? 'var(--accent-gold-soft, #FFF3C4)' : 'var(--bg-card, white)',
+                textAlign: 'center', cursor: 'pointer', fontSize: 13, fontWeight: 600,
+                color: data.sex === s ? 'var(--accent-gold-text, #9A6D00)' : 'var(--color-sub, #5A4838)',
+                font: 'inherit', minHeight: 44,
+              }
             }, s)
           )
         )
@@ -230,36 +245,56 @@ function ActivityStep({ data, setData, onNext, onBack }) {
   return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', height: '100%' } },
     React.createElement(StepHeader, { step: 3, total: 7, title: 'Nivel de actividad', sub: '¿Cuánto ejercicio haces normalmente?', onBack }),
     React.createElement('div', { style: { flex: 1, overflowY: 'auto', padding: '0 24px' } },
-      ACTIVITY_LEVELS.map(a =>
-        React.createElement('div', {
-          key: a.id, onClick: () => setData({ ...data, activity: a.id }),
-          style: { border: `2px solid ${data.activity === a.id ? '#F5D040' : '#EAE0D0'}`, background: data.activity === a.id ? '#FFF3C4' : 'white', borderRadius: 14, padding: '13px 16px', marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', transition: 'all 0.15s' }
-        },
-          React.createElement('div', null,
-            React.createElement('div', { style: { fontSize: 15, fontWeight: 600, color: '#1E1408' } }, a.label),
-            React.createElement('div', { style: { fontSize: 12, color: '#7A6652', marginTop: 2 } }, a.desc)
-          ),
-          data.activity === a.id && React.createElement('div', { style: { width: 20, height: 20, borderRadius: 999, background: '#F5D040', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
-            React.createElement('svg', { width: 11, height: 11, viewBox: '0 0 24 24', fill: 'none', stroke: '#1E1408', strokeWidth: 3, strokeLinecap: 'round', strokeLinejoin: 'round' },
-              React.createElement('polyline', { points: '20 6 9 17 4 12' })
+      React.createElement('div', { role: 'radiogroup', 'aria-label': 'Nivel de actividad' },
+        ACTIVITY_LEVELS.map(a =>
+          React.createElement('button', {
+            key: a.id, type: 'button', role: 'radio', 'aria-checked': data.activity === a.id,
+            onClick: () => setData({ ...data, activity: a.id }),
+            style: {
+              width: '100%', textAlign: 'left',
+              border: `2px solid ${data.activity === a.id ? '#F5D040' : 'var(--border-color, #EAE0D0)'}`,
+              background: data.activity === a.id ? 'var(--accent-gold-soft, #FFF3C4)' : 'var(--bg-card, white)',
+              borderRadius: 14, padding: '13px 16px', marginBottom: 10,
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              cursor: 'pointer', transition: 'all 0.15s', font: 'inherit', color: 'inherit',
+            }
+          },
+            React.createElement('div', null,
+              React.createElement('div', { style: { fontSize: 15, fontWeight: 600, color: 'var(--color-text, #1E1408)' } }, a.label),
+              React.createElement('div', { style: { fontSize: 12, color: 'var(--color-sub, #7A6652)', marginTop: 2 } }, a.desc)
+            ),
+            data.activity === a.id && React.createElement('div', { style: { width: 20, height: 20, borderRadius: 999, background: '#F5D040', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+              React.createElement('svg', { width: 11, height: 11, viewBox: '0 0 24 24', fill: 'none', stroke: '#1E1408', strokeWidth: 3, strokeLinecap: 'round', strokeLinejoin: 'round' },
+                React.createElement('polyline', { points: '20 6 9 17 4 12' })
+              )
             )
           )
         )
       ),
       React.createElement('div', { style: { marginTop: 8 } },
-        React.createElement('div', { style: { fontSize: 13, fontWeight: 600, color: '#5A4838', marginBottom: 8 } }, 'Estilo de vida diario'),
-        LIFESTYLES.map(l =>
-          React.createElement('div', {
-            key: l.id, onClick: () => setData({ ...data, lifestyle: l.id }),
-            style: { border: `2px solid ${data.lifestyle === l.id ? '#FFAB5E' : '#EAE0D0'}`, background: data.lifestyle === l.id ? '#FFE5CC' : 'white', borderRadius: 14, padding: '11px 14px', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', transition: 'all 0.15s' }
-          },
-            React.createElement('div', null,
-              React.createElement('div', { style: { fontSize: 14, fontWeight: 600, color: '#1E1408' } }, l.label),
-              React.createElement('div', { style: { fontSize: 11, color: '#7A6652', marginTop: 1 } }, l.desc)
-            ),
-            data.lifestyle === l.id && React.createElement('div', { style: { width: 18, height: 18, borderRadius: 999, background: '#FFAB5E', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
-              React.createElement('svg', { width: 10, height: 10, viewBox: '0 0 24 24', fill: 'none', stroke: 'white', strokeWidth: 3, strokeLinecap: 'round', strokeLinejoin: 'round' },
-                React.createElement('polyline', { points: '20 6 9 17 4 12' })
+        React.createElement('div', { style: { fontSize: 13, fontWeight: 600, color: 'var(--color-sub, #5A4838)', marginBottom: 8 } }, 'Estilo de vida diario'),
+        React.createElement('div', { role: 'radiogroup', 'aria-label': 'Estilo de vida diario' },
+          LIFESTYLES.map(l =>
+            React.createElement('button', {
+              key: l.id, type: 'button', role: 'radio', 'aria-checked': data.lifestyle === l.id,
+              onClick: () => setData({ ...data, lifestyle: l.id }),
+              style: {
+                width: '100%', textAlign: 'left',
+                border: `2px solid ${data.lifestyle === l.id ? '#FFAB5E' : 'var(--border-color, #EAE0D0)'}`,
+                background: data.lifestyle === l.id ? 'var(--accent-carbs-soft, #FFE5CC)' : 'var(--bg-card, white)',
+                borderRadius: 14, padding: '11px 14px', marginBottom: 8,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                cursor: 'pointer', transition: 'all 0.15s', font: 'inherit', color: 'inherit',
+              }
+            },
+              React.createElement('div', null,
+                React.createElement('div', { style: { fontSize: 14, fontWeight: 600, color: 'var(--color-text, #1E1408)' } }, l.label),
+                React.createElement('div', { style: { fontSize: 11, color: 'var(--color-sub, #7A6652)', marginTop: 1 } }, l.desc)
+              ),
+              data.lifestyle === l.id && React.createElement('div', { style: { width: 18, height: 18, borderRadius: 999, background: '#FFAB5E', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+                React.createElement('svg', { width: 10, height: 10, viewBox: '0 0 24 24', fill: 'none', stroke: 'white', strokeWidth: 3, strokeLinecap: 'round', strokeLinejoin: 'round' },
+                  React.createElement('polyline', { points: '20 6 9 17 4 12' })
+                )
               )
             )
           )
@@ -279,12 +314,20 @@ function RoutineStep({ data, setData, onNext, onBack }) {
     React.createElement('div', { style: { flex: 1, overflowY: 'auto', padding: '0 24px' } },
       DAYS.map(day =>
         React.createElement('div', { key: day, style: { marginBottom: 12 } },
-          React.createElement('div', { style: { fontSize: 13, fontWeight: 600, color: '#5A4838', marginBottom: 6 } }, day),
-          React.createElement('div', { style: { display: 'flex', gap: 6 } },
+          React.createElement('div', { style: { fontSize: 13, fontWeight: 600, color: 'var(--color-sub, #5A4838)', marginBottom: 6 } }, day),
+          React.createElement('div', { style: { display: 'flex', gap: 6 }, role: 'radiogroup', 'aria-label': `Actividad para ${day}` },
             TRAINING_TYPES.map(t =>
-              React.createElement('div', {
-                key: t.id, onClick: () => setDay(day, t.id),
-                style: { flex: 1, padding: '8px 4px', borderRadius: 10, textAlign: 'center', border: `1.5px solid ${routine[day] === t.id ? t.color : '#EAE0D0'}`, background: routine[day] === t.id ? t.bg : 'white', cursor: 'pointer', fontSize: 11, fontWeight: 600, color: routine[day] === t.id ? t.color : '#9A8878', transition: 'all 0.12s' }
+              React.createElement('button', {
+                key: t.id, type: 'button', role: 'radio', 'aria-checked': routine[day] === t.id,
+                onClick: () => setDay(day, t.id),
+                style: {
+                  flex: 1, padding: '8px 4px', borderRadius: 10, textAlign: 'center',
+                  border: `1.5px solid ${routine[day] === t.id ? t.color : 'var(--border-color, #EAE0D0)'}`,
+                  background: routine[day] === t.id ? t.bg : 'var(--bg-card, white)',
+                  cursor: 'pointer', fontSize: 11, fontWeight: 600,
+                  color: routine[day] === t.id ? t.color : 'var(--color-muted, #9A8878)',
+                  transition: 'all 0.12s', font: 'inherit',
+                }
               }, t.label)
             )
           )

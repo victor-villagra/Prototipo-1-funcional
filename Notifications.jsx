@@ -14,6 +14,7 @@ const NOTIF_STYLES = {
 const DEFAULT_NOTIF_PREFS = {
   enabled: true,
   mealReminders: true,
+  waterReminders: true,
   goalAlerts: true,
   weeklyReports: true,
   motivation: true,
@@ -66,11 +67,16 @@ function generateAppNotifications(todayMeals, dailyGoals, dailyLog, userData, ex
       const hasDinner = todayMeals.some(m => { const h = _mealHour(m); return h >= 19 && h < 24; });
       if (!hasDinner) out.push({ type: 'reminder', subtype: 'dinner_rem', title: '¿Ya cenaste? 🌙', message: 'Registra tu cena antes de terminar el día.', action: { screen: 'add', mealName: 'Cena' } });
     }
+  }
 
-    // ── Water reminder ──
-    // Active during waking hours (10–22). Compares actual intake against the
-    // proportional target for the current time of day: by 14h the user should
-    // be at ~50% of goal, by 20h at ~85%. Fires at most once per 3h window.
+  // ── Water reminders ──
+  // Lives outside of mealReminders since a user might want hydration nudges
+  // without meal-logging nags (especially returning users with stable meal
+  // habits). Active during waking hours (10–22). Compares actual intake
+  // against the proportional target for the current time of day: by 14h the
+  // user should be at ~50% of goal, by 20h at ~85%. Fires at most once per
+  // 3h window so it doesn't pester.
+  if (prefs.waterReminders) {
     const waterGoal = waterGoalMl || 2000;
     const waterMl   = todayWaterMl || 0;
     if (hour >= 10 && hour < 22 && !has('water_rem', 3)) {
@@ -127,10 +133,13 @@ function generateAppNotifications(todayMeals, dailyGoals, dailyLog, userData, ex
       { title: 'Nuevo día, nueva oportunidad ☀️', message: 'Hoy es un gran día para cuidar tu alimentación.' },
       { title: '¡Gran progreso! 🚀', message: 'Registrar lo que comes es el primer paso hacia tus objetivos.' },
     ];
-    // Only show if at least 1 day logged this week
-    const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay()); weekStart.setHours(0, 0, 0, 0);
-    const _key = (typeof localDateKey === 'function') ? localDateKey : (d => d.toDateString());
-    const weekStartKey = _key(weekStart);
+    // Only show if at least 1 day logged this week. Uses the shared
+    // Monday-start helper so "this week" matches what the user sees on
+    // Dashboard / Progress / WeeklyAnalysis instead of drifting to a
+    // Sunday-start calendar week.
+    const weekStartKey = (typeof getWeekStartKey === 'function')
+      ? getWeekStartKey(now)
+      : (() => { const ws = new Date(now); const d = ws.getDay(); ws.setDate(ws.getDate() + (d === 0 ? -6 : 1 - d)); ws.setHours(0,0,0,0); return localDateKey(ws); })();
     const hasWeekData = (dailyLog || []).some(m => m.date >= weekStartKey);
     if (hasWeekData) {
       const pick = motivs[Math.floor(Math.random() * motivs.length)];
@@ -269,6 +278,7 @@ function NotificationSettingsSheet({ prefs, onUpdatePrefs, onClose }) {
 
   const sections = [
     { key: 'mealReminders', icon: '⏰', title: 'Recordatorios de comidas', desc: 'Te avisa cuando no has registrado desayuno, almuerzo o cena.' },
+    { key: 'waterReminders', icon: '💧', title: 'Recordatorios de agua', desc: 'Te recuerda hidratarte si vas por debajo de tu meta diaria.' },
     { key: 'goalAlerts', icon: '⚠️', title: 'Alertas de metas', desc: 'Avisa cuando te acercas o superas tu meta calórica diaria.' },
     { key: 'weeklyReports', icon: '📊', title: 'Reportes semanales', desc: 'Resumen de tu progreso cada lunes.' },
     { key: 'motivation', icon: '🎉', title: 'Motivación', desc: 'Mensajes de ánimo basados en tu progreso.' },

@@ -11,9 +11,10 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="assets/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>
-<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html { height: 100%; height: 100dvh; }
@@ -236,7 +237,7 @@ function saveState(state) {
 const FULLSCREEN = new Set(['onboarding', 'add', 'weekly', 'notifications']);
 
 function PhoneShell({ screen, children }) {
-  const mobile = _isMobile();
+  const mobile = useIsMobile();
   return React.createElement('div', {
     className: 'phone-shell',
     style: {
@@ -278,7 +279,14 @@ function App() {
   const [prevScreen,  setPrevScreen]  = useState('dashboard');
   const [editingMealId, setEditingMealId] = useState(null);
   const [notifications, setNotifications] = useState(saved && saved.notifications ? saved.notifications : []);
-  const [notifPrefs, setNotifPrefs] = useState(saved && saved.notifPrefs ? saved.notifPrefs : DEFAULT_NOTIF_PREFS);
+  // Merge stored prefs with defaults so users upgrading from a build that
+  // didn't have a given toggle (e.g. waterReminders) get the new option in
+  // its default-on state instead of silently disabled.
+  const [notifPrefs, setNotifPrefs] = useState(
+    saved && saved.notifPrefs
+      ? { ...DEFAULT_NOTIF_PREFS, ...saved.notifPrefs }
+      : DEFAULT_NOTIF_PREFS
+  );
   const [waterLog, setWaterLog]   = useState(saved && saved.waterLog  ? saved.waterLog  : []);
   const [waterGoal, setWaterGoal] = useState(saved && saved.waterGoal ? saved.waterGoal : 2000);
   const [waterPresets, setWaterPresets] = useState(saved && saved.waterPresets ? saved.waterPresets : null);
@@ -409,6 +417,70 @@ function App() {
     setScreen('onboarding');
   }
 
+  // Export the full app state to a JSON file the user can save anywhere
+  // (cloud drive, AirDrop, email-to-self). The envelope mirrors what saveState
+  // writes to localStorage so importing it back is a straight replace.
+  function handleExportData() {
+    try {
+      const payload = {
+        _v: SCHEMA_VERSION,
+        exportedAt: new Date().toISOString(),
+        data: { userData, dailyGoals, dailyLog, foodLibrary, notifications, notifPrefs, waterLog, waterGoal, waterPresets, consumptionLimits, consumptionLog, darkTheme },
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `kcalia-backup-${localDateKey(new Date())}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: e && e.message ? e.message : 'Error exportando' };
+    }
+  }
+
+  // Replace the current state with the contents of an exported file. We
+  // accept both the v3 envelope ({ _v, data }) and a raw state object from
+  // older manual backups so users aren't locked out by format drift.
+  function handleImportData(file) {
+    return new Promise((resolve) => {
+      try {
+        const reader = new FileReader();
+        reader.onerror = () => resolve({ ok: false, error: 'No se pudo leer el archivo.' });
+        reader.onload = (e) => {
+          try {
+            const parsed = JSON.parse(e.target.result);
+            if (!parsed || typeof parsed !== 'object') throw new Error('Archivo inválido.');
+            const d = parsed._v ? parsed.data : parsed;
+            if (!d || typeof d !== 'object') throw new Error('Estructura inválida.');
+            if (d.userData)             setUserData(d.userData);
+            if (d.dailyGoals)           setDailyGoals(d.dailyGoals);
+            if (Array.isArray(d.dailyLog))    setDailyLog(d.dailyLog);
+            if (Array.isArray(d.foodLibrary)) setFoodLibrary(d.foodLibrary.filter(f => f && f.custom));
+            if (Array.isArray(d.notifications)) setNotifications(d.notifications);
+            if (d.notifPrefs)           setNotifPrefs({ ...DEFAULT_NOTIF_PREFS, ...d.notifPrefs });
+            if (Array.isArray(d.waterLog))    setWaterLog(d.waterLog);
+            if (typeof d.waterGoal === 'number') setWaterGoal(d.waterGoal);
+            if (Array.isArray(d.waterPresets) || d.waterPresets === null) setWaterPresets(d.waterPresets);
+            if (Array.isArray(d.consumptionLimits)) setConsumptionLimits(d.consumptionLimits);
+            if (Array.isArray(d.consumptionLog))    setConsumptionLog(d.consumptionLog);
+            if (typeof d.darkTheme === 'boolean') setDarkTheme(d.darkTheme);
+            if (d.userData) setScreen('dashboard');
+            resolve({ ok: true });
+          } catch (err) {
+            resolve({ ok: false, error: err && err.message ? err.message : 'Archivo inválido.' });
+          }
+        };
+        reader.readAsText(file);
+      } catch (e) {
+        resolve({ ok: false, error: e && e.message ? e.message : 'Error importando.' });
+      }
+    });
+  }
+
   // ── Water tracking helpers ──
   function handleAddWater(ml) {
     const now = new Date();
@@ -474,13 +546,38 @@ function App() {
 
   // Re-render at local midnight so "today" rolls over without leaving stale
   // meals visible. Keeps a tick state that bumps each new day.
+  //
+  // Two trigger paths:
+  // 1. setTimeout to next local midnight, for the case where the app stays
+  //    open across the boundary. Tab-throttling can skew this by minutes but
+  //    not by hours, which is good enough.
+  // 2. visibilitychange + the existing today-key comparison — if the device
+  //    suspended overnight, the setTimeout may have been frozen and fired
+  //    late. When the user returns we check whether the day rolled over and
+  //    bump immediately so yesterday's meals don't linger on Dashboard.
   const [dayTick, setDayTick] = useState(0);
+  const dayKeyRef = React.useRef(localDateKey(new Date()));
   useEffect(() => {
     const now = new Date();
     const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 1);
     const ms = nextMidnight - now;
-    const t = setTimeout(() => setDayTick(n => n + 1), ms);
-    return () => clearTimeout(t);
+    const t = setTimeout(() => {
+      dayKeyRef.current = localDateKey(new Date());
+      setDayTick(n => n + 1);
+    }, ms);
+    function onVisibility() {
+      if (document.visibilityState !== 'visible') return;
+      const nowKey = localDateKey(new Date());
+      if (nowKey !== dayKeyRef.current) {
+        dayKeyRef.current = nowKey;
+        setDayTick(n => n + 1);
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      clearTimeout(t);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, [dayTick]);
 
   // dayTick bumps at local midnight so "today" rolls over even if the user
@@ -631,6 +728,8 @@ function App() {
           onUpdateDarkTheme: setDarkTheme,
           consumptionLimits,
           onUpdateConsumptionLimits: handleUpdateConsumptionLimits,
+          onExportData: handleExportData,
+          onImportData: handleImportData,
         });
 
       default: // dashboard

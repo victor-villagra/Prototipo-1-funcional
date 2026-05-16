@@ -104,7 +104,7 @@ function MacroBar({ label, val, goal, color, unit }) {
   );
 }
 
-function MealCard({ meal, idx, onTap }) {
+function MealCard({ meal, onTap }) {
   const c = getMealStyle(meal.name);
   const items = meal.foods ? meal.foods.map(f => f.name) : (meal.items || []);
   const accessibleLabel = `${meal.name}, ${Math.round(meal.totalKcal || meal.kcal || 0)} kcal${meal.time ? ', ' + meal.time : ''}`;
@@ -220,18 +220,12 @@ function MealDetailSheet({ meal, onClose, onDelete, onEdit }) {
   );
 }
 
-function _getWeekStartKey() {
-  const d = new Date();
-  const day = d.getDay();
-  d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
-  d.setHours(0, 0, 0, 0);
-  return (typeof localDateKey === 'function') ? localDateKey(d) : d.toISOString().slice(0, 10);
-}
-
 function ConsumptionTracker({ limits, log, onAdd, onUndo }) {
   if (!limits || limits.length === 0) return null;
   const todayKey    = (typeof localDateKey === 'function') ? localDateKey(new Date()) : new Date().toISOString().slice(0, 10);
-  const weekStart   = _getWeekStartKey();
+  // Shared helper from Constants.jsx so this matches every other "this week"
+  // calculation in the app (Monday-start, local timezone).
+  const weekStart   = (typeof getWeekStartKey === 'function') ? getWeekStartKey() : todayKey;
 
   return React.createElement('div', { style: { margin: '14px 16px 0' } },
     limits.map(limit => {
@@ -393,7 +387,7 @@ function Dashboard({ onNavigate, userData, todayMeals, dailyGoals, unreadCount, 
         )
       ),
       (todayMeals && todayMeals.length > 0)
-        ? todayMeals.map((m, i) => React.createElement(MealCard, { key: m.id || i, meal: m, idx: i, onTap: () => setSelectedMeal(m) }))
+        ? todayMeals.map((m, i) => React.createElement(MealCard, { key: m.id || i, meal: m, onTap: () => setSelectedMeal(m) }))
         : React.createElement('div', {
             style: { background: 'var(--bg-card, white)', borderRadius: 16, padding: '20px 16px', textAlign: 'center', boxShadow: '0 2px 12px rgba(30,20,8,0.07)', marginBottom: 10 }
           },

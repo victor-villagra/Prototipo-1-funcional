@@ -183,20 +183,45 @@ const DB_FOODS = NUTRITION_DB.map(_buildDBFood);
 // behave identically.
 const _norm = (typeof normalizeText === 'function') ? normalizeText : (s => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''));
 
+// Token-based fuzzy match against NUTRITION_DB. Previous version used a
+// substring + length-ratio score with a 0.3 threshold, which produced bad
+// matches for short queries (e.g. "te" → "tomate", "pa" → "papaya"). New
+// rules:
+//   1. Reject queries shorter than 3 chars outright — too ambiguous.
+//   2. Exact alias match wins immediately.
+//   3. Otherwise score by shared whole-word tokens, requiring at least 0.5
+//      Jaccard-style coverage and at least one fully shared token, so
+//      "carne molida" still finds "Carne molida" but "te" doesn't match
+//      "tomate".
 function findFoodInDB(name) {
-  const q = _norm(name);
+  const q = _norm(name).trim();
+  if (!q || q.length < 3) return null;
+
+  // Exact alias match first.
+  for (const food of NUTRITION_DB) {
+    for (const alias of food.n) {
+      if (_norm(alias) === q) return food;
+    }
+  }
+
+  const qTokens = q.split(/\s+/).filter(t => t.length >= 2);
+  if (qTokens.length === 0) return null;
+
   let best = null, bestScore = 0;
   for (const food of NUTRITION_DB) {
     for (const alias of food.n) {
-      const a = _norm(alias);
-      if (a === q) return food;
-      if (q.includes(a) || a.includes(q)) {
-        const score = Math.min(q.length, a.length) / Math.max(q.length, a.length);
-        if (score > bestScore) { bestScore = score; best = food; }
+      const aTokens = _norm(alias).split(/\s+/).filter(Boolean);
+      if (aTokens.length === 0) continue;
+      let shared = 0;
+      for (const qt of qTokens) {
+        if (aTokens.includes(qt)) shared++;
       }
+      if (shared === 0) continue;
+      const score = shared / Math.max(qTokens.length, aTokens.length);
+      if (score > bestScore) { bestScore = score; best = food; }
     }
   }
-  return bestScore > 0.3 ? best : null;
+  return bestScore >= 0.5 ? best : null;
 }
 
 function MacroDot({ color }) {

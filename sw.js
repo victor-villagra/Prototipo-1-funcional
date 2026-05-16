@@ -1,6 +1,6 @@
 // KCALIA Service Worker — offline-first cache.
 // Bump CACHE whenever JSX/HTML assets change so users pick up new code on next load.
-const CACHE = 'kcalia-v9';
+const CACHE = 'kcalia-v10';
 const ASSETS = [
   './',
   './index.html',
@@ -19,8 +19,12 @@ const ASSETS = [
   './assets/icon-192.png',
   './assets/icon-512.png',
   'https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=DM+Sans:wght@300;400;500;600&display=swap',
-  'https://unpkg.com/react@18.3.1/umd/react.development.js',
-  'https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js',
+  // Production builds of React — ~80% smaller than the dev bundle and they
+  // strip dev warnings. The previous dev URLs are intentionally not listed:
+  // even though they may still live in old caches, the cache bump above
+  // (v9→v10) deletes them on activate.
+  'https://unpkg.com/react@18.3.1/umd/react.production.min.js',
+  'https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js',
 ];
 
 self.addEventListener('install', e => {

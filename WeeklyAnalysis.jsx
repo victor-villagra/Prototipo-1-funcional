@@ -146,8 +146,11 @@ function WeeklyAnalysis({ onBack, dailyLog, dailyGoals, userData, onUpdateGoals 
     }
 
     // Compute protein average from actual logged meals to give a real insight.
-    const weekStart = new Date(today); weekStart.setDate(today.getDate() - 6); weekStart.setHours(0, 0, 0, 0);
-    const weekStartKey = _key(weekStart);
+    // "Last 7 days" rolling window matches what the WeekChart above visualizes.
+    // Note: this is intentionally different from getWeekStartKey (Monday-of-this-week);
+    // the chart shows the rolling window so the insight follows the same data.
+    const weekStartDate = new Date(today); weekStartDate.setDate(today.getDate() - 6); weekStartDate.setHours(0, 0, 0, 0);
+    const weekStartKey = _key(weekStartDate);
     // m.date is now a sortable "YYYY-MM-DD" key, so string comparison gives the
     // same result as date comparison without paying for parsing each row.
     const weekMeals = (dailyLog || []).filter(m => m.date >= weekStartKey);

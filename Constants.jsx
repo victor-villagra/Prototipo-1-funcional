@@ -208,6 +208,49 @@ function parseClampedNumber(raw, min, max, allowFloat = true) {
   return v;
 }
 
+// Reactive media-query hook. Components that branch on viewport width (mobile
+// vs. desktop "phone shell" mock) must update on resize/orientation change,
+// not just on initial render — otherwise rotating the device leaves the layout
+// stuck on the old breakpoint until something else triggers a re-render.
+function useMediaQuery(query) {
+  const get = () => (typeof window !== 'undefined' && window.matchMedia)
+    ? window.matchMedia(query).matches
+    : false;
+  const [matches, setMatches] = React.useState(get);
+  React.useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mql = window.matchMedia(query);
+    const onChange = () => setMatches(mql.matches);
+    onChange();
+    // Safari < 14 only supports addListener/removeListener.
+    if (mql.addEventListener) mql.addEventListener('change', onChange);
+    else mql.addListener(onChange);
+    return () => {
+      if (mql.removeEventListener) mql.removeEventListener('change', onChange);
+      else mql.removeListener(onChange);
+    };
+  }, [query]);
+  return matches;
+}
+
+// Shared mobile breakpoint hook. Mirrors the legacy `_isMobile()` predicate but
+// is reactive — see useMediaQuery for the motivation.
+function useIsMobile() {
+  return useMediaQuery('(max-width: 600px)');
+}
+
+// Canonical "first day of the current week" key. Latin-American convention is
+// Monday-as-start, which is what every screen in this app uses. Centralizing
+// it here prevents the drift we previously had between Dashboard (Monday),
+// WeeklyAnalysis (rolling 7-day), and Notifications (Sunday-start).
+function getWeekStartKey(date = new Date()) {
+  const d = new Date(date);
+  const day = d.getDay(); // 0 = Sunday
+  d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
+  d.setHours(0, 0, 0, 0);
+  return localDateKey(d);
+}
+
 Object.assign(window, {
   COLORS,
   GOAL_LABELS,
@@ -218,10 +261,13 @@ Object.assign(window, {
   DEFAULT_DAILY_GOALS,
   normalizeText,
   localDateKey,
+  getWeekStartKey,
   defaultMealNameForHour,
   computeNutritionTargets,
   parseClampedNumber,
   uniqueId,
   useEscapeKey,
   useBodyClass,
+  useMediaQuery,
+  useIsMobile,
 });
