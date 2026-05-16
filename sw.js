@@ -1,6 +1,6 @@
 // KCALIA Service Worker — offline-first cache.
 // Bump CACHE whenever JSX/HTML assets change so users pick up new code on next load.
-const CACHE = 'kcalia-v13';
+const CACHE = 'kcalia-v14';
 const ASSETS = [
   './',
   './index.html',
@@ -16,6 +16,7 @@ const ASSETS = [
   './Notifications.jsx',
   './WaterTracker.jsx',
   './manifest.json',
+  './assets/icon-180.png',
   './assets/icon-192.png',
   './assets/icon-512.png',
   'https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=DM+Sans:wght@300;400;500;600&display=swap',

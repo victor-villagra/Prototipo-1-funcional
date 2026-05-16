@@ -1,52 +1,91 @@
 <!DOCTYPE html>
-<!-- Abre este archivo en un navegador, luego haz clic en los botones para descargar los iconos PNG -->
+<!-- Abre este archivo en un navegador, espera a que cargue Nunito, y descarga cada PNG.
+     Luego mueve los archivos a la carpeta assets/ (reemplazando los existentes). -->
 <html>
-<head><meta charset="UTF-8"><title>Generar iconos KCALIA</title></head>
-<body style="font-family:sans-serif;padding:24px;background:#f5f5f5">
+<head>
+  <meta charset="UTF-8">
+  <title>Generar iconos KCALIA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@900&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Nunito', sans-serif; padding: 24px; background: #f5f5f5; color: #1E1408; }
+    h2 { margin-bottom: 8px; }
+    p { margin-bottom: 8px; }
+    .status { padding: 8px 12px; border-radius: 6px; background: #FFF3C4; display: inline-block; font-weight: 700; }
+    .status.ready { background: #C8F0C8; }
+    .row { display: flex; gap: 24px; margin-top: 16px; flex-wrap: wrap; align-items: flex-start; }
+    .col { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+    canvas { box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+    .label { font-size: 13px; color: #5A4530; font-weight: 600; }
+    button { padding: 8px 16px; font-weight: 700; cursor: pointer; border: 0; border-radius: 8px; background: #F5D040; color: #1E1408; font-family: inherit; }
+    button:hover { background: #FFD850; }
+  </style>
+</head>
+<body>
   <h2>Generador de iconos KCALIA</h2>
-  <p>Haz clic en cada botón para descargar el ícono. Luego mueve los archivos a la carpeta <code>assets/</code>.</p>
-  <div style="display:flex;gap:24px;margin-top:16px;flex-wrap:wrap">
-    <div>
-      <canvas id="c192" width="192" height="192" style="border-radius:38px;display:block;margin-bottom:8px"></canvas>
+  <p>Descarga los tres PNG y muévelos a la carpeta <code>assets/</code>, reemplazando los existentes.</p>
+  <p><span id="status" class="status">Cargando fuente Nunito…</span></p>
+  <div class="row">
+    <div class="col">
+      <canvas id="c180" width="180" height="180"></canvas>
+      <span class="label">180×180 — iOS apple-touch-icon</span>
+      <button onclick="dl('c180','icon-180.png')">Descargar icon-180.png</button>
+    </div>
+    <div class="col">
+      <canvas id="c192" width="192" height="192"></canvas>
+      <span class="label">192×192 — PWA (Android)</span>
       <button onclick="dl('c192','icon-192.png')">Descargar icon-192.png</button>
     </div>
-    <div>
-      <canvas id="c512" width="512" height="512" style="border-radius:100px;display:block;margin-bottom:8px"></canvas>
+    <div class="col">
+      <canvas id="c512" width="512" height="512"></canvas>
+      <span class="label">512×512 — PWA grande</span>
       <button onclick="dl('c512','icon-512.png')">Descargar icon-512.png</button>
     </div>
   </div>
   <script>
+    // KCALIA icon — pintado en canvas a partir de un único patrón paramétrico.
+    // - Fondo: cuadrado con esquinas redondeadas (iOS aplica su propia máscara
+    //   encima, pero las esquinas internas evitan que un fondo cuadrado se
+    //   vea raro en Android no-adaptive).
+    // - Anillo de progreso 3/4 (asociación visual con tracking calórico).
+    // - K central en Nunito 900 (misma tipografía que la app).
     function drawIcon(canvas) {
       const s = canvas.width;
       const ctx = canvas.getContext('2d');
-      const r = s * 0.18;
+      ctx.clearRect(0, 0, s, s);
 
-      // Background
-      ctx.fillStyle = '#F5D040';
+      // Fondo con gradiente radial sutil (profundidad estilo iOS).
+      const grad = ctx.createRadialGradient(s * 0.5, s * 0.35, s * 0.08, s * 0.5, s * 0.55, s * 0.75);
+      grad.addColorStop(0, '#FFE082');
+      grad.addColorStop(1, '#F5C730');
+      ctx.fillStyle = grad;
       roundRect(ctx, 0, 0, s, s, s * 0.22);
       ctx.fill();
 
-      // Circle ring background
+      // Anillo de fondo (claro, ~30% de opacidad blanca).
+      const ringR = s * 0.34;
+      const ringW = s * 0.075;
       ctx.beginPath();
-      ctx.arc(s/2, s/2, r, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(255,255,255,0.4)';
-      ctx.lineWidth = s * 0.06;
+      ctx.arc(s / 2, s / 2, ringR, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+      ctx.lineWidth = ringW;
       ctx.stroke();
 
-      // Circle ring filled arc
+      // Arco "lleno" — 3/4 de vuelta empezando arriba (a -π/2).
       ctx.beginPath();
-      ctx.arc(s/2, s/2, r, -Math.PI/2, Math.PI * 1.2);
+      ctx.arc(s / 2, s / 2, ringR, -Math.PI / 2, Math.PI);
       ctx.strokeStyle = '#1E1408';
-      ctx.lineWidth = s * 0.06;
+      ctx.lineWidth = ringW;
       ctx.lineCap = 'round';
       ctx.stroke();
 
-      // Letter K
+      // K central, grande y bold.
       ctx.fillStyle = '#1E1408';
-      ctx.font = `900 ${s * 0.36}px "Arial Black", Arial`;
+      ctx.font = '900 ' + (s * 0.46) + 'px Nunito, "Arial Black", Arial, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('K', s/2, s/2 + s*0.02);
+      ctx.fillText('K', s / 2, s / 2 + s * 0.015);
     }
 
     function roundRect(ctx, x, y, w, h, r) {
@@ -70,8 +109,16 @@
       a.click();
     }
 
-    drawIcon(document.getElementById('c192'));
-    drawIcon(document.getElementById('c512'));
+    // Espera a que Nunito termine de cargar antes de pintar — si no, el navegador
+    // usa fallback y la K sale con otra forma.
+    document.fonts.ready.then(function () {
+      drawIcon(document.getElementById('c180'));
+      drawIcon(document.getElementById('c192'));
+      drawIcon(document.getElementById('c512'));
+      const s = document.getElementById('status');
+      s.textContent = 'Listo — Nunito cargada. Descarga los tres PNGs.';
+      s.classList.add('ready');
+    });
   </script>
 </body>
 </html>
